@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Data (too large for git)
+data/*.csv
+
+# ML artifacts
+ml/artifacts/
+
+# IDE
+.vscode/
+.idea/
