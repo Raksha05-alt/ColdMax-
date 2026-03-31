@@ -17,6 +17,7 @@ export interface ServiceRequest {
   technicianRating?: number;
   technicianJobsCount?: number;
   technicianETA?: string;
+  paymentMethod?: "cash" | "card" | "paynow" | "cheque";
   createdAt: number;
 }
 
@@ -118,7 +119,7 @@ export function RequestProvider({ children }: { children: ReactNode }) {
 
 export function useRequests() {
   const context = useContext(RequestContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useRequests must be used within a RequestProvider");
   }
   return context;

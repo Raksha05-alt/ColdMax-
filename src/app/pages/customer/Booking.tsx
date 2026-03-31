@@ -21,11 +21,16 @@ export default function Booking() {
   const tomorrow = addDays(new Date(), 1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(tomorrow);
   const [selectedTime, setSelectedTime] = useState("morning");
-  const [selectedUnitIds, setSelectedUnitIds] = useState<number[]>([units[0].id]);
+  const [numberOfUnits, setNumberOfUnits] = useState(1);
   const [selectedReason, setSelectedReason] = useState("");
   const [comments, setComments] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  
+  // New states for aircon servicing unit selection
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);  // IDs of selected units
+  const [isOtherUnit, setIsOtherUnit] = useState(false);  // "Chosen air con does not fall within subscription range"
 
   const tabs = [
     { id: "schedule", label: "Schedule", icon: Calendar },
@@ -39,12 +44,58 @@ export default function Booking() {
     { id: "evening", label: "17:00 - 20:00", slots: 5 },
   ];
 
+  // Pricing functions based on number of units
+  const getServicingPrice = (units: number) => {
+    const prices: Record<number, number> = { 1: 43.60, 2: 59.95, 3: 76.30, 4: 92.65, 5: 109.00, 6: 125.35 };
+    return prices[units] || 43.60;
+  };
+
+  const getChemicalWashPrice = (units: number) => {
+    const prices: Record<number, number> = { 1: 92.65, 2: 174.40, 3: 245.25, 4: 305.20, 5: 381.50 };
+    return prices[units] || 92.65;
+  };
+
+  const getChemicalOverhaulPrice = (units: number) => {
+    const prices: Record<number, number> = { 1: 163.50, 2: 305.20, 3: 425.10, 4: 523.20, 5: 654.00 };
+    return prices[units] || 163.50;
+  };
+
+  const getGasTopUpPrice = (units: number) => {
+    const prices: Record<number, number> = { 1: 163.50, 2: 305.20, 3: 425.10, 4: 523.20, 5: 654.00 };
+    return prices[units] || 163.50;
+  };
+
   const serviceReasons = [
-    { id: "maintenance", label: "General Maintenance", cost: 45, premiumFree: true },
-    { id: "cleaning", label: "Filter Cleaning", cost: 30, premiumFree: true },
-    { id: "chemical", label: "Chemical Wash", cost: 120, premiumFree: true },
-    { id: "gas", label: "Gas Top-Up", cost: 80, premiumFree: false },
-    { id: "repair", label: "Repair/Diagnosis", cost: 60, premiumFree: false },
+    { 
+      id: "servicing", 
+      label: "Aircon Servicing", 
+      getPriceForUnits: getServicingPrice,
+      premiumFree: true 
+    },
+    { 
+      id: "chemical", 
+      label: "Chemical Wash", 
+      getPriceForUnits: getChemicalWashPrice,
+      premiumFree: false  // NOT free under premium
+    },
+    { 
+      id: "overhaul", 
+      label: "Chemical Overhaul", 
+      getPriceForUnits: getChemicalOverhaulPrice,
+      premiumFree: false 
+    },
+    { 
+      id: "gas", 
+      label: "Gas Top-Up", 
+      getPriceForUnits: getGasTopUpPrice,
+      premiumFree: false 
+    },
+    { 
+      id: "repair", 
+      label: "Repair/Diagnosis", 
+      getPriceForUnits: () => 60,  // Fixed price
+      premiumFree: false 
+    },
   ];
 
   const maintenanceTips = [
@@ -54,77 +105,65 @@ export default function Booking() {
   ];
 
   const upcomingReminders = [
-    { title: "Filter Cleaning Due", date: "In 5 days", unit: "Living Room", priority: "medium" },
     { title: "Annual Service", date: "In 2 weeks", unit: "Master Bedroom", priority: "low" },
     { title: "Chemical Wash Recommended", date: "Overdue", unit: "Living Room", priority: "high" },
   ];
 
   const selectedReasonData = serviceReasons.find(r => r.id === selectedReason);
-
-  let computedTotalCost = 0;
-  let allUnitsFree = true;
-  let hasPremiumFreeClaim = false;
-  let hasFreePoorCondition = false;
-
-  const selectedUnitsData = selectedUnitIds.map(id => units.find(u => u.id === id)!);
-
-  selectedUnitsData.forEach(unit => {
-    let unitCost = selectedReasonData ? selectedReasonData.cost : 0;
-    let unitIsFree = false;
-
-    if (isPremium && selectedReasonData?.premiumFree) {
-      if (unit.healthPercent < 80) {
-        // Below Excellent: ALWAYS FREE
-        unitCost = 0;
-        unitIsFree = true;
-        hasFreePoorCondition = true;
-      } else {
-        // Excellent condition (>= 80)
-        if ((unit.freeClaimsUsed || 0) < 2) {
-          // Has claims left
-          unitCost = 0;
-          unitIsFree = true;
-          hasPremiumFreeClaim = true;
-        } else {
-          // Out of claims -> they must pay
-        }
-      }
+  
+  // For servicing with "Other" units, premium members still pay
+  const isServiceFreeForPremium = selectedReason === "servicing"
+    ? (isPremium && selectedReasonData?.premiumFree && !isOtherUnit && selectedUnits.length > 0)
+    : (isPremium && selectedReasonData?.premiumFree);
+  
+  // Calculate total cost based on service type and selections
+  let totalCost = 0;
+  if (selectedReason === "servicing") {
+    if (isOtherUnit) {
+      // "Other" units always incur cost
+      totalCost = selectedReasonData ? selectedReasonData.getPriceForUnits(numberOfUnits) : 0;
+    } else if (selectedUnits.length > 0) {
+      // Regular users pay for selected units, Premium users pay $0
+      totalCost = isPremium ? 0 : (selectedReasonData ? selectedReasonData.getPriceForUnits(selectedUnits.length) : 0);
     }
-    
-    if (!unitIsFree) {
-      allUnitsFree = false;
-    }
-    computedTotalCost += unitCost;
-  });
-
-  const totalCost = computedTotalCost;
-  const isServiceFreeForPremium = allUnitsFree && selectedUnitIds.length > 0;
+  } else {
+    // Other services use standard pricing
+    totalCost = isServiceFreeForPremium ? 0 : (selectedReasonData ? selectedReasonData.getPriceForUnits(numberOfUnits) : 0);
+  }
 
   const handleConfirmBooking = () => {
-    if (!selectedDate || !selectedReason || (!selectedPayment && !isServiceFreeForPremium)) return;
+    // Validation checks
+    if (!selectedDate || !selectedReason) return;
+    
+    // For servicing, must have unit selection (either selectedUnits or isOtherUnit)
+    if (selectedReason === "servicing" && selectedUnits.length === 0 && !isOtherUnit) {
+      return;
+    }
+    
+    // Must have payment method unless service is free for premium
+    if (!selectedPayment && !isServiceFreeForPremium) return;
 
-    // Optional: increment unit claims here for demo purposes if we were saving state.
-    selectedUnitsData.forEach(unit => {
-      if (isPremium && selectedReasonData?.premiumFree && unit.healthPercent >= 80 && (unit.freeClaimsUsed || 0) < 2) {
-        unit.freeClaimsUsed = (unit.freeClaimsUsed || 0) + 1;
-      }
-    });
+    // Show confirmation modal first
+    setShowConfirmationModal(true);
+  };
 
+  const proceedWithBooking = () => {
     const timeLabel = times.find((t) => t.id === selectedTime)?.label || "";
     const booking = {
-      date: format(selectedDate, "MMM dd"),
-      dateFormatted: format(selectedDate, "MMM dd, yyyy"),
+      date: format(selectedDate!, "MMM dd"),
+      dateFormatted: format(selectedDate!, "MMM dd, yyyy"),
       time: timeLabel,
       technician: "David Tan",
       service: selectedReasonData?.label || "Service",
-      unit: selectedUnitsData.map(u => u.name).join(", "),
+      unit: `${numberOfUnits} unit${numberOfUnits > 1 ? 's' : ''}`,
       status: "confirmed" as const,
-      scheduledDateTime: selectedDate,
+      scheduledDateTime: selectedDate!,
       totalCost: totalCost,
       isPremiumFree: isServiceFreeForPremium,
     };
 
     setCurrentBooking(booking);
+    setShowConfirmationModal(false);
     setBookingConfirmed(true);
   };
 
@@ -163,7 +202,7 @@ export default function Booking() {
               <FileText className="w-5 h-5 text-blue-600" />
               <div>
                 <p className="text-xs text-slate-500">Service</p>
-                <p className="font-semibold text-slate-900">{selectedReasonData?.label} ({selectedUnitIds.length} unit{selectedUnitIds.length > 1 ? "s" : ""})</p>
+                <p className="font-semibold text-slate-900">{selectedReasonData?.label} ({numberOfUnits} unit{numberOfUnits > 1 ? "s" : ""})</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -272,42 +311,39 @@ export default function Booking() {
               {selectedReason && (
                 <div className={clsx(
                   "rounded-xl p-5 shadow-lg",
-                  computedTotalCost === 0 && selectedUnitIds.length > 0
+                  isServiceFreeForPremium
                     ? "bg-gradient-to-br from-emerald-600 to-emerald-700"
                     : "bg-gradient-to-br from-blue-600 to-blue-700"
                 )}>
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-5 h-5 text-white/70" />
                     <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
-                      {computedTotalCost === 0 ? "Premium Benefit" : "Estimated Cost"}
+                      {isServiceFreeForPremium ? "Premium Benefit" : "Estimated Cost"}
                     </p>
                   </div>
-                  {computedTotalCost === 0 ? (
+                  {isServiceFreeForPremium ? (
                     <>
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-black text-white">$0</span>
                         <span className="text-sm text-white/70 font-medium line-through">
-                          ${selectedReasonData!.cost * selectedUnitIds.length}
+                          ${selectedReasonData!.cost * numberOfUnits}
                         </span>
                       </div>
-                      <p className="text-xs text-emerald-100 mt-2 flex flex-col gap-1">
-                        <span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5" /> Maintenance fee waived by Premium</span>
-                        {hasPremiumFreeClaim && <span className="opacity-80 scale-90 origin-left">- Uses 1 claim for Excellent AC</span>}
-                        {hasFreePoorCondition && <span className="opacity-80 scale-90 origin-left">- Free unlimited for Poor AC condition</span>}
+                      <p className="text-xs text-emerald-100 mt-2 flex items-center gap-1.5">
+                        <Crown className="w-3.5 h-3.5" />
+                        Maintenance fee waived under Premium Subscription
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white">${computedTotalCost}</span>
+                        <span className="text-4xl font-black text-white">${totalCost}</span>
                         <span className="text-sm text-blue-200 font-medium">
-                          ({selectedUnitIds.length} unit{selectedUnitIds.length > 1 ? 's' : ''})
+                          ({numberOfUnits} unit{numberOfUnits > 1 ? 's' : ''})
                         </span>
                       </div>
                       <p className="text-xs text-blue-100 mt-2">
-                        {isPremium && selectedReasonData?.premiumFree 
-                          ? "Units with Excellent condition that maxed 2-time claims are billed." 
-                          : "Final cost may vary based on actual service requirements"}
+                        Final cost may vary based on actual service requirements
                       </p>
                     </>
                   )}
@@ -340,10 +376,16 @@ export default function Booking() {
                   {serviceReasons.map((reason) => {
                     const isSelected = selectedReason === reason.id;
                     const isFree = isPremium && reason.premiumFree;
+                    const displayPrice = reason.getPriceForUnits(1);  // Show price for 1 unit
                     return (
                       <button
                         key={reason.id}
-                        onClick={() => setSelectedReason(reason.id)}
+                        onClick={() => {
+                          setSelectedReason(reason.id);
+                          // Reset unit selections when service changes
+                          setSelectedUnits([]);
+                          setIsOtherUnit(false);
+                        }}
                         className={clsx(
                           "w-full p-3 rounded-lg border transition-all flex items-center justify-between",
                           isSelected ? "bg-blue-50 border-blue-500" : "bg-white border-slate-200 hover:border-blue-300"
@@ -353,11 +395,13 @@ export default function Booking() {
                         <div className="flex items-center gap-2">
                           {isFree ? (
                             <div className="flex items-center gap-1">
-                              <span className="text-sm text-slate-400 line-through">${reason.cost}</span>
+                              <span className="text-sm text-slate-400 line-through">${displayPrice.toFixed(2)}</span>
                               <span className="text-sm font-bold text-emerald-600">$0</span>
                             </div>
                           ) : (
-                            <span className={clsx("text-sm font-bold", isSelected ? "text-blue-600" : "text-slate-500")}>${reason.cost}/unit</span>
+                            <span className={clsx("text-sm font-bold", isSelected ? "text-blue-600" : "text-slate-500")}>
+                              ${displayPrice.toFixed(2)}{reason.id === "repair" ? "" : "/unit"}
+                            </span>
                           )}
                         </div>
                       </button>
@@ -366,43 +410,119 @@ export default function Booking() {
                 </div>
               </div>
 
-              {/* Select Units */}
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-3">Select Units to Service *</h3>
-                <div className="space-y-2">
-                  {units.map((unit) => {
-                    const isSelected = selectedUnitIds.includes(unit.id);
-                    return (
-                      <button
-                        key={unit.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            if (selectedUnitIds.length > 1) {
-                              setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.id));
+              {/* Unit Selection for Aircon Servicing */}
+              {selectedReason === "servicing" && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-3">Select Air Con Unit(s) *</h3>
+                  <div className="space-y-2">
+                    {units.map((unit) => {
+                      const isSelected = selectedUnits.includes(unit.id);
+                      const excellentHealth = unit.healthPercent >= 80;
+                      return (
+                        <button
+                          key={unit.id}
+                          onClick={() => {
+                            if (isOtherUnit) {
+                              // If "Other" is selected, clear it first
+                              setIsOtherUnit(false);
                             }
-                          } else {
-                            setSelectedUnitIds([...selectedUnitIds, unit.id]);
-                          }
-                        }}
-                        className={clsx(
-                          "w-full p-3 rounded-lg border transition-all flex items-center justify-between",
-                          isSelected ? "bg-blue-50 border-blue-500" : "bg-white border-slate-200 hover:border-blue-300"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={clsx("w-5 h-5 rounded flex items-center justify-center border", isSelected ? "bg-blue-600 border-blue-600" : "border-slate-300")}>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                            setSelectedUnits(prev =>
+                              prev.includes(unit.id)
+                                ? prev.filter(id => id !== unit.id)
+                                : [...prev, unit.id]
+                            );
+                          }}
+                          className={clsx(
+                            "w-full p-3 rounded-lg border transition-all flex items-start justify-between",
+                            isSelected ? "bg-blue-50 border-blue-500" : "bg-white border-slate-200 hover:border-blue-300"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={clsx(
+                              "w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5",
+                              isSelected ? "bg-blue-600 border-blue-600" : "border-slate-300"
+                            )}>
+                              {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                            </div>
+                            <div className="text-left">
+                              <p className={clsx("font-medium text-sm", isSelected ? "text-blue-900" : "text-slate-700")}>
+                                {unit.name}
+                              </p>
+                              <p className="text-xs text-slate-500">{unit.model} • Health: {unit.healthPercent}%</p>
+                              {excellentHealth && isSelected && (
+                                <p className="text-xs text-emerald-600 font-medium mt-1">
+                                  ✓ 1 free servicing appointment remaining (was 2)
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-left">
-                            <span className={clsx("font-medium text-sm block", isSelected ? "text-blue-900" : "text-slate-700")}>{unit.name}</span>
-                            <span className="text-[11px] text-slate-500">Condition: {unit.healthPercent}% | Claims used: {unit.freeClaimsUsed || 0}/2</span>
+                          <div className={clsx(
+                            "px-2 py-1 rounded text-[10px] font-bold",
+                            excellentHealth ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          )}>
+                            {excellentHealth ? "EXCELLENT" : "NEEDS ATTENTION"}
                           </div>
+                        </button>
+                      );
+                    })}
+                    
+                    {/* "Other" Unit Option */}
+                    <button
+                      onClick={() => {
+                        setIsOtherUnit(!isOtherUnit);
+                        if (!isOtherUnit) {
+                          // Clear other selections when selecting "Other"
+                          setSelectedUnits([]);
+                        }
+                      }}
+                      className={clsx(
+                        "w-full p-3 rounded-lg border transition-all flex items-start justify-between",
+                        isOtherUnit ? "bg-blue-50 border-blue-500" : "bg-white border-slate-200 hover:border-blue-300"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={clsx(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5",
+                          isOtherUnit ? "bg-blue-600 border-blue-600" : "border-slate-300"
+                        )}>
+                          {isOtherUnit && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                         </div>
-                      </button>
-                    )
-                  })}
+                        <div className="text-left">
+                          <p className={clsx("font-medium text-sm", isOtherUnit ? "text-blue-900" : "text-slate-700")}>
+                            Chosen air con does not fall within subscription range
+                          </p>
+                          <p className="text-xs text-red-500 font-medium mt-0.5">
+                            ⚠️ Will incur cost even for premium members
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Number of Units - only show for non-servicing OR when "Other" is selected */}
+              {(selectedReason !== "servicing" || (selectedReason === "servicing" && isOtherUnit)) && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-3">
+                    {selectedReason === "servicing" && isOtherUnit 
+                      ? "Number of 'OTHER' AC Units *" 
+                      : "Number of AC Units *"}
+                  </h3>
+                  <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between">
+                    <button onClick={() => setNumberOfUnits(Math.max(1, numberOfUnits - 1))} disabled={numberOfUnits <= 1} className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <MinusCircle className="w-5 h-5 text-slate-700" />
+                    </button>
+                    <div className="text-center">
+                      <p className="text-3xl font-black text-slate-900">{numberOfUnits}</p>
+                      <p className="text-xs text-slate-500">unit{numberOfUnits > 1 ? 's' : ''}</p>
+                    </div>
+                    <button onClick={() => setNumberOfUnits(Math.min(10, numberOfUnits + 1))} disabled={numberOfUnits >= 10} className="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <PlusCircle className="w-5 h-5 text-blue-600" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Select Date */}
               <div>
@@ -507,7 +627,7 @@ export default function Booking() {
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
                   <Crown className="w-5 h-5 text-amber-600" />
                   <p className="text-sm text-emerald-800 font-medium">
-                    No payment required - covered by your Premium benefits.
+                    No payment required - maintenance covered by your Premium subscription.
                   </p>
                 </div>
               )}
@@ -515,17 +635,22 @@ export default function Booking() {
               {/* Booking Summary & CTA */}
               <button
                 onClick={handleConfirmBooking}
-                disabled={!selectedDate || !selectedReason || (!selectedPayment && !isServiceFreeForPremium)}
+                disabled={
+                  !selectedDate || 
+                  !selectedReason || 
+                  (selectedReason === "servicing" && selectedUnits.length === 0 && !isOtherUnit) ||
+                  (!selectedPayment && !isServiceFreeForPremium)
+                }
                 className={clsx(
                   "w-full py-3.5 rounded-lg font-semibold shadow-sm transition-colors",
-                  (selectedDate && selectedReason && (selectedPayment || isServiceFreeForPremium))
+                  (selectedDate && selectedReason && (selectedReason !== "servicing" || selectedUnits.length > 0 || isOtherUnit) && (selectedPayment || isServiceFreeForPremium))
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : "bg-slate-300 text-slate-500 cursor-not-allowed"
                 )}
               >
                 {isServiceFreeForPremium
                   ? "Confirm Booking - Free"
-                  : `Confirm Booking - $${totalCost}`}
+                  : `Confirm Booking - $${totalCost.toFixed(2)}`}
               </button>
             </motion.div>
           )}
@@ -566,6 +691,46 @@ export default function Booking() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+          >
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 text-center mb-2">Confirm Booking</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-slate-700 leading-relaxed">
+                <strong>Base price confirmed.</strong> If extra work is needed, we'll quote before proceeding.
+              </p>
+              <p className="text-sm text-slate-700 leading-relaxed mt-2">
+                {selectedReason === "repair" && (
+                  <>For air-con repair/diagnosis services, the listed price is a diagnostic fee, which will be <strong>waived if you proceed with the repair</strong>.</>
+                )}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmationModal(false)}
+                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={proceedWithBooking}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm"
+              >
+                Proceed
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

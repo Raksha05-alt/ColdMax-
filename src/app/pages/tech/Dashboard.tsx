@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   MapPin, Clock, DollarSign, Star, CheckCircle2, TrendingUp, Navigation,
-  Wrench, AlertCircle, X, ChevronLeft, Target, Zap,
+  Wrench, AlertCircle, X, ChevronLeft, Target, Zap, CreditCard, Banknote, 
+  Smartphone, FileText, Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
-import { useRequests } from "../../context/RequestContext";
 import { PushNotification } from "../../components/PushNotification";
 import TechJobView from "./TechJobView";
+import { getServicePrice, calculateTechPayout } from "../../utils/pricing";
 
 type Job = {
   id: number;
@@ -23,21 +24,30 @@ type Job = {
   duration?: string;
   status?: string;
   scheduledDate?: string;
+  date?: string; // Added date field
   skillsMatch?: number;
   acBrand?: string;
   numUnits?: number;
   comments?: string;
+  paymentMethod?: "cash" | "card" | "paynow" | "cheque";
+  distanceKm?: number; // Added for filtering
+  isEmergency?: boolean; // Added to identify emergency jobs
 };
 
 export default function TechDashboard() {
   const navigate = useNavigate();
-  const { getPendingRequests } = useRequests();
   const [showJobNotification, setShowJobNotification] = useState(false);
   const [activeTab, setActiveTab] = useState<"available" | "upcoming">("available");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [acceptedJobIds, setAcceptedJobIds] = useState<number[]>([]);
-
-  const pendingRequests = getPendingRequests();
+  const [completedEarnings, setCompletedEarnings] = useState(0); // Track today's earnings
+  const [jobsCompleted, setJobsCompleted] = useState(2); // Track jobs done today
+  
+  // Get technician type from localStorage
+  const techType = localStorage.getItem("coldmax_tech_type") as "freelance" | "fulltime" || "fulltime";
+  
+  // Get technician home location from localStorage (for distance calculation)
+  const techHomeLocation = "12 Orchard Road"; // This should be from profile/settings
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,60 +57,190 @@ export default function TechDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Listen for job completion events from other pages
+  useEffect(() => {
+    const handleJobComplete = (event: CustomEvent) => {
+      const { amount, jobId } = event.detail;
+      setCompletedEarnings(prev => prev + amount);
+      setJobsCompleted(prev => prev + 1);
+      // Remove from accepted jobs
+      setAcceptedJobIds(prev => prev.filter(id => id !== jobId));
+    };
+    
+    window.addEventListener("job-completed" as any, handleJobComplete);
+    return () => window.removeEventListener("job-completed" as any, handleJobComplete);
+  }, []);
+
   const getSkillsMatch = (issue: string) => {
     const matches: Record<string, number> = {
       "AC Not Cooling": 95,
-      "Filter Replacement": 98,
+      "Aircon Servicing": 98,
       "Chemical Overhaul": 92,
       "General Maintenance": 96,
       "Gas Top-Up": 94,
+      "Water Leaking": 93,
+      "Weak Airflow": 95,
+      "Not Cooling": 96,
+      "Blinking": 91,
+      "Temperature Inconsistent": 94,
     };
     return matches[issue] || 90;
   };
 
-  const availableJobs: Job[] = [
+  const today = new Date();
+  const todayStr = "Today";
+  const tomorrow = "Tomorrow";
+  const twoDay = new Date(today);
+  twoDay.setDate(twoDay.getDate() + 2);
+  const twoDayStr = twoDay.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  // Helper function to calculate duration based on job type and units
+  const calculateDuration = (issue: string, numUnits: number = 1, isEmergency: boolean = false) => {
+    if (issue.toLowerCase().includes("servicing")) {
+      // 45 mins per unit
+      const mins = numUnits * 45;
+      return mins >= 60 ? `${(mins / 60).toFixed(1)} hrs` : `${mins} mins`;
+    } else if (issue.toLowerCase().includes("chemical overhaul")) {
+      // 2-3 hrs per unit
+      const hrs = numUnits * 2.5;
+      return `${hrs.toFixed(1)} hrs`;
+    } else if (issue.toLowerCase().includes("gas top-up")) {
+      return "1-1.5 hrs";
+    } else if (issue.toLowerCase().includes("water leaking")) {
+      return "1-1.5 hrs";
+    } else if (isEmergency) {
+      return "1-2 hrs";
+    }
+    return "1-1.5 hrs";
+  };
+
+  // All available jobs with corrected pricing and dates
+  const allAvailableJobs: Job[] = [
     {
       id: 1, customer: "Sarah Lim", location: "12 Orchard Blvd, Tower B",
-      issue: "AC Not Cooling", unitType: "Daikin 12000 BTU", time: "09:00 AM",
-      distance: "2.4 km", payout: "$85", priority: "urgent", duration: "1.5 hrs",
-      skillsMatch: getSkillsMatch("AC Not Cooling"), acBrand: "Daikin", numUnits: 1,
+      issue: "Not Cooling", unitType: "Daikin 12000 BTU", time: "ASAP",
+      distance: "2.4 km", distanceKm: 2.4,
+      payout: `$${calculateTechPayout(getServicePrice("Not Cooling", 1, true)).toFixed(2)}`,
+      priority: "urgent", duration: calculateDuration("Not Cooling", 1, true), date: todayStr, isEmergency: true,
+      skillsMatch: getSkillsMatch("Not Cooling"), acBrand: "Daikin", numUnits: 1,
       comments: "AC stopped cooling suddenly. No unusual sounds.",
+      paymentMethod: "card",
     },
     {
       id: 2, customer: "John Tan", location: "45 Marina Bay St",
-      issue: "Filter Replacement", unitType: "Mitsubishi 9000 BTU", time: "11:30 AM",
-      distance: "5.1 km", payout: "$45", priority: "normal", duration: "45 mins",
-      skillsMatch: getSkillsMatch("Filter Replacement"), acBrand: "Mitsubishi", numUnits: 2,
-      comments: "Filter has not been changed in over a year.",
+      issue: "Aircon Servicing", unitType: "Mitsubishi 9000 BTU", time: "10:00 PM",
+      distance: "5.1 km", distanceKm: 5.1,
+      payout: `$${calculateTechPayout(getServicePrice("Aircon Servicing", 2, false)).toFixed(2)}`,
+      priority: "normal", duration: calculateDuration("Aircon Servicing", 2, false), date: todayStr, isEmergency: false,
+      skillsMatch: getSkillsMatch("Aircon Servicing"), acBrand: "Mitsubishi", numUnits: 2,
+      comments: "Regular servicing for 2 units.",
+      paymentMethod: "cash",
     },
     {
       id: 3, customer: "David Lee", location: "23 Raffles Place",
       issue: "Chemical Overhaul", unitType: "Panasonic 18000 BTU", time: "ASAP",
-      distance: "3.2 km", payout: "$250", priority: "urgent", duration: "3 hrs",
+      distance: "3.2 km", distanceKm: 3.2,
+      payout: `$${calculateTechPayout(getServicePrice("Chemical Overhaul", 1, false)).toFixed(2)}`,
+      priority: "urgent", duration: calculateDuration("Chemical Overhaul", 1, false), date: todayStr, isEmergency: true,
       skillsMatch: getSkillsMatch("Chemical Overhaul"), acBrand: "Panasonic", numUnits: 1,
       comments: "Unit smells musty. Last serviced over 2 years ago.",
+      paymentMethod: "paynow",
+    },
+    {
+      id: 4, customer: "Lisa Wong", location: "78 Bukit Timah Rd",
+      issue: "Aircon Servicing", unitType: "LG 12000 BTU", time: "10:00 AM",
+      distance: "4.5 km", distanceKm: 4.5,
+      payout: `$${calculateTechPayout(getServicePrice("Aircon Servicing", 1, false)).toFixed(2)}`,
+      priority: "normal", duration: calculateDuration("Aircon Servicing", 1, false), date: tomorrow, isEmergency: false,
+      skillsMatch: getSkillsMatch("Aircon Servicing"), acBrand: "LG", numUnits: 1,
+      comments: "Standard servicing appointment.",
+      paymentMethod: "card",
+    },
+    {
+      id: 5, customer: "Michael Ng", location: "90 East Coast Rd",
+      issue: "Water Leaking", unitType: "Daikin 9000 BTU", time: "11:00 AM",
+      distance: "15.2 km", distanceKm: 15.2,
+      payout: `$${calculateTechPayout(getServicePrice("Water Leaking", 1, true)).toFixed(2)}`,
+      priority: "urgent", duration: calculateDuration("Water Leaking", 1, true), date: todayStr, isEmergency: true,
+      skillsMatch: getSkillsMatch("Water Leaking"), acBrand: "Daikin", numUnits: 1,
+      comments: "Water dripping from indoor unit.",
+      paymentMethod: "paynow",
+    },
+    {
+      id: 6, customer: "Rachel Tan", location: "55 Clementi Ave",
+      issue: "Gas Top-Up", unitType: "Samsung 12000 BTU", time: "02:00 PM",
+      distance: "18.5 km", distanceKm: 18.5,
+      payout: `$${calculateTechPayout(getServicePrice("Gas Top-Up", 1, false)).toFixed(2)}`,
+      priority: "normal", duration: calculateDuration("Gas Top-Up", 1, false), date: twoDayStr, isEmergency: false,
+      skillsMatch: getSkillsMatch("Gas Top-Up"), acBrand: "Samsung", numUnits: 1,
+      comments: "AC not cold enough, may need gas top-up.",
+      paymentMethod: "cash",
+    },
+    {
+      id: 7, customer: "Kevin Lim", location: "33 Tanjong Pagar",
+      issue: "Aircon Servicing", unitType: "Mitsubishi 12000 BTU", time: "03:00 PM",
+      distance: "6.8 km", distanceKm: 6.8,
+      payout: `$${calculateTechPayout(getServicePrice("Aircon Servicing", 3, false)).toFixed(2)}`,
+      priority: "normal", duration: calculateDuration("Aircon Servicing", 3, false), date: tomorrow, isEmergency: false,
+      skillsMatch: getSkillsMatch("Aircon Servicing"), acBrand: "Mitsubishi", numUnits: 3,
+      comments: "3 units need servicing.",
+      paymentMethod: "cheque",
     },
   ];
+
+  // Filter jobs based on technician type
+  const availableJobs = allAvailableJobs.filter(job => {
+    if (techType === "freelance") {
+      // Freelance: Only aircon servicing
+      if (!job.issue.toLowerCase().includes("servicing")) {
+        return false;
+      }
+      // Same-day jobs: max 10km
+      if (job.date === todayStr && job.distanceKm && job.distanceKm > 10) {
+        return false;
+      }
+      // Scheduled jobs: max 10km from home
+      if (job.date !== todayStr && job.distanceKm && job.distanceKm > 10) {
+        return false;
+      }
+      return true;
+    } else {
+      // Full-time: All requests EXCEPT regular aircon servicing
+      // But CAN get emergency servicing
+      if (job.issue.toLowerCase().includes("servicing") && !job.isEmergency) {
+        return false;
+      }
+      return true;
+    }
+  });
 
   const upcomingJobs: Job[] = [
     {
       id: 101, customer: "Alex Chen", location: "88 Tampines Ave 10",
       issue: "General Maintenance", unitType: "LG 12000 BTU", time: "02:00 PM",
-      distance: "8.7 km", payout: "$120", status: "scheduled", scheduledDate: "Today",
+      distance: "8.7 km", distanceKm: 8.7,
+      payout: `$${calculateTechPayout(getServicePrice("General Maintenance", 2, false)).toFixed(2)}`,
+      status: "scheduled", scheduledDate: todayStr, date: todayStr,
       skillsMatch: getSkillsMatch("General Maintenance"), acBrand: "LG", numUnits: 2,
       comments: "Routine maintenance for living room and bedroom units.",
+      paymentMethod: "cheque",
     },
     {
       id: 102, customer: "Mary Wong", location: "45 Clementi Rd",
       issue: "Gas Top-Up", unitType: "Daikin 9000 BTU", time: "04:30 PM",
-      distance: "12.1 km", payout: "$80", status: "scheduled", scheduledDate: "Today",
+      distance: "12.1 km", distanceKm: 12.1,
+      payout: `$${calculateTechPayout(getServicePrice("Gas Top-Up", 1, false)).toFixed(2)}`,
+      status: "scheduled", scheduledDate: todayStr, date: todayStr,
       skillsMatch: getSkillsMatch("Gas Top-Up"), acBrand: "Daikin", numUnits: 1,
       comments: "AC not cooling as well. May need gas top-up.",
+      paymentMethod: "card",
     },
   ];
 
   const handleAcceptJob = (job: Job) => {
-    setAcceptedJobIds(prev => [...prev, job.id]);
+    setAcceptedJobIds(prev => (prev.includes(job.id) ? prev : [...prev, job.id]));
+    setActiveTab("upcoming");
+    setSelectedJob(null);
   };
 
   // Filter out accepted jobs from available
@@ -109,6 +249,36 @@ export default function TechDashboard() {
     ...upcomingJobs,
     ...availableJobs.filter(j => acceptedJobIds.includes(j.id)).map(j => ({ ...j, status: "scheduled", scheduledDate: "Today" })),
   ];
+
+  const getPaymentMethodIcon = (method?: "cash" | "card" | "paynow" | "cheque") => {
+    switch (method) {
+      case "cash":
+        return <Banknote className="w-3.5 h-3.5 text-emerald-600" />;
+      case "card":
+        return <CreditCard className="w-3.5 h-3.5 text-blue-600" />;
+      case "paynow":
+        return <Smartphone className="w-3.5 h-3.5 text-purple-600" />;
+      case "cheque":
+        return <FileText className="w-3.5 h-3.5 text-orange-600" />;
+      default:
+        return <CreditCard className="w-3.5 h-3.5 text-slate-400" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method?: "cash" | "card" | "paynow" | "cheque") => {
+    switch (method) {
+      case "cash":
+        return "Cash";
+      case "card":
+        return "Credit Card";
+      case "paynow":
+        return "PayNow";
+      case "cheque":
+        return "Cheque";
+      default:
+        return "Card";
+    }
+  };
 
   // Job Details View
   if (selectedJob) {
@@ -125,7 +295,7 @@ export default function TechDashboard() {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-5 pt-6 pb-4">
         <div className="flex items-start justify-between mb-4">
@@ -146,7 +316,7 @@ export default function TechDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="px-5 py-4 grid grid-cols-2 gap-3">
+      <div className="px-5 py-4 grid grid-cols-2 gap-3 bg-slate-50">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="w-4 h-4 text-emerald-600" />
@@ -169,7 +339,7 @@ export default function TechDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="px-5 pb-3">
+      <div className="px-5 pb-3 bg-slate-50">
         <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab("available")}
@@ -203,7 +373,7 @@ export default function TechDashboard() {
       </div>
 
       {/* Content */}
-      <div className="px-5 py-2 flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-5 pb-6">
         <AnimatePresence mode="wait">
           {activeTab === "available" && (
             <motion.div
@@ -211,7 +381,7 @@ export default function TechDashboard() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="space-y-3 pb-4"
+              className="space-y-3"
             >
               <p className="text-xs text-slate-500 mb-3">Jobs near you waiting to be accepted</p>
               {filteredAvailable.length === 0 ? (
@@ -259,12 +429,22 @@ export default function TechDashboard() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <p className="text-xs text-slate-600">{job.time}</p>
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <p className="text-xs text-slate-600 font-medium">{job.date}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <Navigation className="w-3.5 h-3.5 text-blue-600" />
                           <p className="text-xs font-medium text-blue-600">{job.distance}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <p className="text-xs text-slate-600">{job.time}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getPaymentMethodIcon(job.paymentMethod)}
+                          <p className="text-xs font-medium text-slate-700">{getPaymentMethodLabel(job.paymentMethod)}</p>
                         </div>
                       </div>
                     </div>
@@ -280,7 +460,7 @@ export default function TechDashboard() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-3 pb-4"
+              className="space-y-3"
             >
               <p className="text-xs text-slate-500 mb-3">Jobs you've accepted</p>
               {allUpcoming.length === 0 ? (
@@ -325,12 +505,22 @@ export default function TechDashboard() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <p className="text-xs text-slate-600">{job.time}</p>
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <p className="text-xs text-slate-600 font-medium">{job.date}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <Navigation className="w-3.5 h-3.5 text-blue-600" />
                           <p className="text-xs font-medium text-blue-600">{job.distance}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <p className="text-xs text-slate-600">{job.time}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getPaymentMethodIcon(job.paymentMethod)}
+                          <p className="text-xs font-medium text-slate-700">{getPaymentMethodLabel(job.paymentMethod)}</p>
                         </div>
                       </div>
                     </div>

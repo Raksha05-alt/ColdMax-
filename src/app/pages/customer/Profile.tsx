@@ -199,7 +199,7 @@ export default function Profile() {
                 <Crown className={`w-4 h-4 ${isPremium ? "text-amber-600" : "text-blue-600"}`} />
                 <span>{isPremium ? "Premium Member" : "Standard Subscriber"}</span>
                 {isPremium && (
-                  <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded">FREE MAINTENANCE</span>
+                  <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded">FREE SERVICING</span>
                 )}
               </div>
               <ChevronRight className="w-4 h-4" />

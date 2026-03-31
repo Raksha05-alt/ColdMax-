@@ -1,13 +1,15 @@
+import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
+import { ArrowLeft, Settings, Activity, Thermometer, Droplets, Wind, Fan, Info, AlertTriangle } from "lucide-react";
 import { motion } from "motion/react";
-import { ArrowLeft, Activity, Wind, Droplets, Thermometer, AlertTriangle, Fan, Settings, Info } from "lucide-react";
-import { useNavigate, useParams } from "react-router";
+import clsx from "clsx";
 import { units } from "../../data/units";
-import { clsx } from "clsx";
+import { useSubscription } from "../../context/SubscriptionContext";
 
 export default function HealthMonitor() {
-  const navigate = useNavigate();
   const { unitId } = useParams();
+  const navigate = useNavigate();
+  const { tier } = useSubscription();
   
   const initialIndex = unitId ? units.findIndex(u => u.id === Number(unitId)) : 0;
   const [selectedIndex, setSelectedIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
@@ -250,19 +252,35 @@ export default function HealthMonitor() {
               ? "Your unit requires attention. Multiple sensors indicate declining performance. Filter health and airflow efficiency are below optimal levels. Schedule service soon to avoid costly repairs."
               : "Critical issues detected! Your unit is operating well below optimal levels. Immediate professional service is strongly recommended to prevent complete failure and potential damage."}
           </p>
-          {unit.healthPercent < 70 && (
-            <button
-              onClick={() => navigate('/customer/booking')}
-              className={clsx(
-                "w-full mt-4 py-3 rounded-xl font-bold shadow-lg transition-all",
-                unit.healthPercent < 40
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "bg-amber-500 text-amber-950 hover:bg-amber-600"
-              )}
-            >
-              {unit.healthPercent < 40 ? "Book Emergency Service" : "Schedule Maintenance"}
-            </button>
+          
+          {/* Free servicing eligibility note */}
+          {unit.healthPercent >= 80 ? (
+            <div className="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <p className="text-xs text-blue-200 leading-relaxed">
+                ℹ️ Your unit is performing excellently. You are entitled to a <strong>maximum of 2 free servicing appointments</strong> annually at this health level.
+              </p>
+            </div>
+          ) : unit.healthPercent < 80 && (
+            <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+              <p className="text-xs text-emerald-200 leading-relaxed">
+                ℹ️ Your unit's health score qualifies for <strong>unlimited free servicing visits</strong> to restore optimal performance.
+              </p>
+            </div>
           )}
+
+          <button
+            onClick={() => navigate('/customer/booking')}
+            className={clsx(
+              "w-full mt-4 py-3 rounded-xl font-bold shadow-lg transition-all",
+              unit.healthPercent < 40
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : unit.healthPercent < 80
+                ? "bg-amber-500 text-amber-950 hover:bg-amber-600"
+                : "bg-white text-neutral-900 hover:bg-neutral-100"
+            )}
+          >
+            {unit.healthPercent < 40 ? "Book Emergency Service" : "Schedule Servicing"}
+          </button>
         </div>
 
         {/* Sensor Readings with Descriptions */}
@@ -334,13 +352,6 @@ export default function HealthMonitor() {
              </p>
            </div>
         </div>
-        
-        <button 
-          onClick={() => navigate('/customer/booking')}
-          className="w-full py-4 bg-white text-neutral-900 rounded-2xl font-bold shadow-xl shadow-white/5 active:scale-95 transition-transform"
-        >
-          Schedule Maintenance
-        </button>
 
       </div>
     </div>
