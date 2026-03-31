@@ -12,6 +12,7 @@ export interface AirconUnit {
   airflow: string;
   fanSpeed: string;
   filterHealth: number;
+  freeClaimsUsed: number;
 }
 
 export const units: AirconUnit[] = [
@@ -29,6 +30,7 @@ export const units: AirconUnit[] = [
     airflow: "820 CFM",
     fanSpeed: "Auto (Mid)",
     filterHealth: 12,
+    freeClaimsUsed: 0,
   },
   {
     id: 2,
@@ -44,5 +46,22 @@ export const units: AirconUnit[] = [
     airflow: "640 CFM",
     fanSpeed: "Auto (Low)",
     filterHealth: 35,
+    freeClaimsUsed: 1,
+  },
+  {
+    id: 3,
+    name: "Kids Room",
+    model: "Panasonic",
+    btu: "9000 BTU",
+    temp: "23°C",
+    status: "Optimal",
+    statusColor: "emerald",
+    healthPercent: 92,
+    evaporatorTemp: "15.0°C",
+    humidity: "40%",
+    airflow: "700 CFM",
+    fanSpeed: "Auto (Mid)",
+    filterHealth: 8,
+    freeClaimsUsed: 2, // Maxed out cap
   },
 ];

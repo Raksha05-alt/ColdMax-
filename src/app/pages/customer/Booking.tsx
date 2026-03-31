@@ -21,7 +21,7 @@ export default function Booking() {
   const tomorrow = addDays(new Date(), 1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(tomorrow);
   const [selectedTime, setSelectedTime] = useState("morning");
-  const [numberOfUnits, setNumberOfUnits] = useState(1);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<number[]>([units[0].id]);
   const [selectedReason, setSelectedReason] = useState("");
   const [comments, setComments] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("");
@@ -60,11 +60,55 @@ export default function Booking() {
   ];
 
   const selectedReasonData = serviceReasons.find(r => r.id === selectedReason);
-  const isServiceFreeForPremium = isPremium && selectedReasonData?.premiumFree;
-  const totalCost = isServiceFreeForPremium ? 0 : (selectedReasonData ? selectedReasonData.cost * numberOfUnits : 0);
+
+  let computedTotalCost = 0;
+  let allUnitsFree = true;
+  let hasPremiumFreeClaim = false;
+  let hasFreePoorCondition = false;
+
+  const selectedUnitsData = selectedUnitIds.map(id => units.find(u => u.id === id)!);
+
+  selectedUnitsData.forEach(unit => {
+    let unitCost = selectedReasonData ? selectedReasonData.cost : 0;
+    let unitIsFree = false;
+
+    if (isPremium && selectedReasonData?.premiumFree) {
+      if (unit.healthPercent < 80) {
+        // Below Excellent: ALWAYS FREE
+        unitCost = 0;
+        unitIsFree = true;
+        hasFreePoorCondition = true;
+      } else {
+        // Excellent condition (>= 80)
+        if ((unit.freeClaimsUsed || 0) < 2) {
+          // Has claims left
+          unitCost = 0;
+          unitIsFree = true;
+          hasPremiumFreeClaim = true;
+        } else {
+          // Out of claims -> they must pay
+        }
+      }
+    }
+    
+    if (!unitIsFree) {
+      allUnitsFree = false;
+    }
+    computedTotalCost += unitCost;
+  });
+
+  const totalCost = computedTotalCost;
+  const isServiceFreeForPremium = allUnitsFree && selectedUnitIds.length > 0;
 
   const handleConfirmBooking = () => {
     if (!selectedDate || !selectedReason || (!selectedPayment && !isServiceFreeForPremium)) return;
+
+    // Optional: increment unit claims here for demo purposes if we were saving state.
+    selectedUnitsData.forEach(unit => {
+      if (isPremium && selectedReasonData?.premiumFree && unit.healthPercent >= 80 && (unit.freeClaimsUsed || 0) < 2) {
+        unit.freeClaimsUsed = (unit.freeClaimsUsed || 0) + 1;
+      }
+    });
 
     const timeLabel = times.find((t) => t.id === selectedTime)?.label || "";
     const booking = {
@@ -73,7 +117,7 @@ export default function Booking() {
       time: timeLabel,
       technician: "David Tan",
       service: selectedReasonData?.label || "Service",
-      unit: `${numberOfUnits} unit${numberOfUnits > 1 ? 's' : ''}`,
+      unit: selectedUnitsData.map(u => u.name).join(", "),
       status: "confirmed" as const,
       scheduledDateTime: selectedDate,
       totalCost: totalCost,
@@ -119,7 +163,7 @@ export default function Booking() {
               <FileText className="w-5 h-5 text-blue-600" />
               <div>
                 <p className="text-xs text-slate-500">Service</p>
-                <p className="font-semibold text-slate-900">{selectedReasonData?.label} ({numberOfUnits} unit{numberOfUnits > 1 ? "s" : ""})</p>
+                <p className="font-semibold text-slate-900">{selectedReasonData?.label} ({selectedUnitIds.length} unit{selectedUnitIds.length > 1 ? "s" : ""})</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -228,39 +272,42 @@ export default function Booking() {
               {selectedReason && (
                 <div className={clsx(
                   "rounded-xl p-5 shadow-lg",
-                  isServiceFreeForPremium
+                  computedTotalCost === 0 && selectedUnitIds.length > 0
                     ? "bg-gradient-to-br from-emerald-600 to-emerald-700"
                     : "bg-gradient-to-br from-blue-600 to-blue-700"
                 )}>
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-5 h-5 text-white/70" />
                     <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
-                      {isServiceFreeForPremium ? "Premium Benefit" : "Estimated Cost"}
+                      {computedTotalCost === 0 ? "Premium Benefit" : "Estimated Cost"}
                     </p>
                   </div>
-                  {isServiceFreeForPremium ? (
+                  {computedTotalCost === 0 ? (
                     <>
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-black text-white">$0</span>
                         <span className="text-sm text-white/70 font-medium line-through">
-                          ${selectedReasonData!.cost * numberOfUnits}
+                          ${selectedReasonData!.cost * selectedUnitIds.length}
                         </span>
                       </div>
-                      <p className="text-xs text-emerald-100 mt-2 flex items-center gap-1.5">
-                        <Crown className="w-3.5 h-3.5" />
-                        Maintenance fee waived under Premium Subscription
+                      <p className="text-xs text-emerald-100 mt-2 flex flex-col gap-1">
+                        <span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5" /> Maintenance fee waived by Premium</span>
+                        {hasPremiumFreeClaim && <span className="opacity-80 scale-90 origin-left">- Uses 1 claim for Excellent AC</span>}
+                        {hasFreePoorCondition && <span className="opacity-80 scale-90 origin-left">- Free unlimited for Poor AC condition</span>}
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white">${totalCost}</span>
+                        <span className="text-4xl font-black text-white">${computedTotalCost}</span>
                         <span className="text-sm text-blue-200 font-medium">
-                          ({numberOfUnits} unit{numberOfUnits > 1 ? 's' : ''})
+                          ({selectedUnitIds.length} unit{selectedUnitIds.length > 1 ? 's' : ''})
                         </span>
                       </div>
                       <p className="text-xs text-blue-100 mt-2">
-                        Final cost may vary based on actual service requirements
+                        {isPremium && selectedReasonData?.premiumFree 
+                          ? "Units with Excellent condition that maxed 2-time claims are billed." 
+                          : "Final cost may vary based on actual service requirements"}
                       </p>
                     </>
                   )}
@@ -319,20 +366,41 @@ export default function Booking() {
                 </div>
               </div>
 
-              {/* Number of Units */}
+              {/* Select Units */}
               <div>
-                <h3 className="font-semibold text-slate-900 mb-3">Number of AC Units *</h3>
-                <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between">
-                  <button onClick={() => setNumberOfUnits(Math.max(1, numberOfUnits - 1))} disabled={numberOfUnits <= 1} className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                    <MinusCircle className="w-5 h-5 text-slate-700" />
-                  </button>
-                  <div className="text-center">
-                    <p className="text-3xl font-black text-slate-900">{numberOfUnits}</p>
-                    <p className="text-xs text-slate-500">unit{numberOfUnits > 1 ? 's' : ''}</p>
-                  </div>
-                  <button onClick={() => setNumberOfUnits(Math.min(10, numberOfUnits + 1))} disabled={numberOfUnits >= 10} className="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                    <PlusCircle className="w-5 h-5 text-blue-600" />
-                  </button>
+                <h3 className="font-semibold text-slate-900 mb-3">Select Units to Service *</h3>
+                <div className="space-y-2">
+                  {units.map((unit) => {
+                    const isSelected = selectedUnitIds.includes(unit.id);
+                    return (
+                      <button
+                        key={unit.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            if (selectedUnitIds.length > 1) {
+                              setSelectedUnitIds(selectedUnitIds.filter(id => id !== unit.id));
+                            }
+                          } else {
+                            setSelectedUnitIds([...selectedUnitIds, unit.id]);
+                          }
+                        }}
+                        className={clsx(
+                          "w-full p-3 rounded-lg border transition-all flex items-center justify-between",
+                          isSelected ? "bg-blue-50 border-blue-500" : "bg-white border-slate-200 hover:border-blue-300"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={clsx("w-5 h-5 rounded flex items-center justify-center border", isSelected ? "bg-blue-600 border-blue-600" : "border-slate-300")}>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                          </div>
+                          <div className="text-left">
+                            <span className={clsx("font-medium text-sm block", isSelected ? "text-blue-900" : "text-slate-700")}>{unit.name}</span>
+                            <span className="text-[11px] text-slate-500">Condition: {unit.healthPercent}% | Claims used: {unit.freeClaimsUsed || 0}/2</span>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -439,7 +507,7 @@ export default function Booking() {
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
                   <Crown className="w-5 h-5 text-amber-600" />
                   <p className="text-sm text-emerald-800 font-medium">
-                    No payment required - maintenance covered by your Premium subscription.
+                    No payment required - covered by your Premium benefits.
                   </p>
                 </div>
               )}
