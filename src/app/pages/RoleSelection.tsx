@@ -77,7 +77,7 @@ export default function RoleSelection() {
 
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/tech/dashboard")}
+            onClick={() => navigate("/login/technician/type")}
             className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-lg flex items-center justify-between hover:bg-slate-700/50 transition-colors"
           >
             <div className="flex items-center gap-3">

@@ -29,15 +29,11 @@ export default function MobileLayout() {
 
   const isCustomerHome = location.pathname === "/customer/home";
 
-  // Full-screen map pages — no top padding, overflow hidden, map fills entire frame
-  const isFullScreenMap = location.pathname === "/customer/tracking";
-
   const isDarkStatusBar = 
     location.pathname === "/" ||
     location.pathname.startsWith("/login/technician") ||
     location.pathname.startsWith("/customer/health") ||
-    location.pathname === "/customer/home" ||
-    isFullScreenMap;
+    location.pathname === "/customer/home";
 
   return (
     <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
@@ -60,14 +56,13 @@ export default function MobileLayout() {
 
         {/* Main Content Area */}
         <div className={clsx(
-          "flex-1 relative z-10",
-          isFullScreenMap ? "overflow-hidden" : "pt-14",
-          !isFullScreenMap && (hideTabBar ? "" : "pb-20"),
-          isFullScreenMap ? "bg-slate-100" : isCustomerHome ? "overflow-hidden bg-blue-700" : "overflow-y-auto overflow-x-hidden bg-slate-50"
+          "flex-1 pt-14 relative z-10",
+          hideTabBar ? "" : "pb-20",
+          isCustomerHome ? "overflow-hidden bg-blue-700" : "overflow-y-auto overflow-x-hidden bg-slate-50"
         )} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <div className={clsx(
             "flex flex-col",
-            (isCustomerHome || isFullScreenMap) ? "h-full" : "min-h-full"
+            isCustomerHome ? "h-full" : "min-h-full"
           )}>
             <Outlet />
           </div>

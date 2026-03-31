@@ -12,7 +12,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { selectedLocation } = useLocation();
   const { isPremium, isSubscribed, tier } = useSubscription();
-  const [showRefrigerantAlert, setShowRefrigerantAlert] = useState(true);
+  const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [showPushNotification, setShowPushNotification] = useState(false);
   const [notificationData, setNotificationData] = useState({
     title: "",
@@ -20,20 +20,28 @@ export default function Home() {
   });
 
   const totalUnits = units.length;
-  const REFRIGERANT_LEVEL = 8;
+
+  // Find units that need attention
+  const unitsNeedingAttention = units.filter(unit => 
+    unit.healthPercent < 80 || unit.statusColor === "amber"
+  );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setNotificationData({
-        title: "Low Refrigerant Alert",
-        message: `Master Bedroom unit is at ${REFRIGERANT_LEVEL}%. Service recommended.`,
-      });
-      setShowPushNotification(true);
-      setTimeout(() => {
-        setShowPushNotification(false);
-      }, 4000);
-    }, 2000);
-    return () => clearTimeout(timer);
+    // Show notification for the worst unit health
+    if (unitsNeedingAttention.length > 0) {
+      const timer = setTimeout(() => {
+        const worstUnit = unitsNeedingAttention[0];
+        setNotificationData({
+          title: worstUnit.healthPercent < 70 ? "Unit Requires Attention" : "Health Check Alert",
+          message: `${worstUnit.name} unit is at ${worstUnit.healthPercent}%. ${worstUnit.status}.`,
+        });
+        setShowPushNotification(true);
+        setTimeout(() => {
+          setShowPushNotification(false);
+        }, 4000);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (
@@ -103,39 +111,42 @@ export default function Home() {
         </div>
 
         {/* Low Refrigerant Alert */}
-        {showRefrigerantAlert && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 px-5 mb-6"
-          >
-            <div className="bg-red-500 rounded-xl p-4 shadow-lg relative">
-              <button
-                onClick={() => setShowRefrigerantAlert(false)}
-                className="absolute top-3 right-3 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4 text-white" />
-              </button>
-              <div className="flex items-start gap-3 pr-6">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-white" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm mb-1">Low Refrigerant Alert</h3>
-                  <p className="text-xs text-white/90 mb-3 leading-relaxed">
-                    Your Master Bedroom unit has critically low refrigerant level ({REFRIGERANT_LEVEL}%). Immediate service recommended.
-                  </p>
-                  <button
-                    onClick={() => navigate("/customer/units")}
-                    className="bg-white text-red-600 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors"
-                  >
-                    View Unit Details
-                  </button>
+        {unitsNeedingAttention.map(unit => (
+          !dismissedAlerts.includes(unit.id) && (
+            <motion.div
+              key={unit.id}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative z-10 px-5 mb-6"
+            >
+              <div className="bg-red-500 rounded-xl p-4 shadow-lg relative">
+                <button
+                  onClick={() => setDismissedAlerts([...dismissedAlerts, unit.id])}
+                  className="absolute top-3 right-3 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+                <div className="flex items-start gap-3 pr-6">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm mb-1">Low Refrigerant Alert</h3>
+                    <p className="text-xs text-white/90 mb-3 leading-relaxed">
+                      Your {unit.name} unit has critically low refrigerant level ({unit.healthPercent}%). Immediate service recommended.
+                    </p>
+                    <button
+                      onClick={() => navigate("/customer/units")}
+                      className="bg-white text-red-600 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors"
+                    >
+                      View Unit Details
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )
+        ))}
 
         {/* Quick Actions Grid */}
         <div className="relative z-10 px-5 grid grid-cols-2 gap-3 mb-6">
@@ -167,7 +178,13 @@ export default function Home() {
 
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={() => navigate("/customer/health")}
+            onClick={() => {
+              if (!isSubscribed) {
+                navigate("/customer/subscription-gate");
+              } else {
+                navigate("/customer/health");
+              }
+            }}
             className="bg-slate-900 rounded-xl p-4 flex flex-col items-start shadow-lg col-span-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 opacity-10">
@@ -181,16 +198,18 @@ export default function Home() {
                 <div className="text-left">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="font-semibold text-white text-sm">Live Health Monitor</h3>
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    {isSubscribed && <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                   </div>
                   <p className="text-xs text-slate-400">
-                    {isSubscribed ? `${tier === "premium" ? "Premium" : "Standard"} Subscription` : "Standard & Premium"}
+                    {isSubscribed ? `${tier === "premium" ? "Premium" : "Standard"} Subscription` : "Subscription feature"}
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full">
-                PRO
-              </span>
+              {isSubscribed && (
+                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full uppercase">
+                  {tier === "premium" ? "PREMIUM" : "STANDARD"}
+                </span>
+              )}
             </div>
           </motion.button>
 
