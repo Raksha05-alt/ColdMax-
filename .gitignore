@@ -6,3 +6,20 @@ build/
 !.env.example
 .DS_Store
 *.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Data (too large for git)
+data/*.csv
+
+# ML artifacts
+ml/artifacts/
+
+# IDE
+.vscode/
+.idea/
