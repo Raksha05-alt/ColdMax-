@@ -273,8 +273,8 @@ export default function UrgentRequest() {
 
   const isFormValid = issue && acBrand && selectedPayment;
 
-  return (
-  <div className="fixed inset-0 z-50 flex flex-col h-[100dvh] bg-slate-50 font-sans relative overflow-hidden">
+  return (<div className="min-h-[100dvh] bg-slate-50 font-sans relative flex flex-col">
+  
       <AnimatePresence>
         {(step === "searching" || step === "found") && (
           <motion.div
@@ -285,7 +285,7 @@ export default function UrgentRequest() {
         )}
       </AnimatePresence>
 
-      <header className="px-5 pt-12 pb-4 flex items-center justify-between relative z-20">
+      <header className="px-5 pt-6 pb-4 flex items-center justify-between relative z-20 shrink-0">
         <button
           onClick={() => navigate("/customer/home")}
           className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-neutral-800 shadow-sm border border-neutral-100"
@@ -298,7 +298,7 @@ export default function UrgentRequest() {
         <div className="w-10 h-10" />
       </header>
 
-      <div className="flex-1 flex flex-col justify-end px-5 pb-5 pt-2 relative z-20 overflow-hidden">
+      <div className="flex-1 px-5 pb-5 pt-2 relative z-20 overflow-y-auto">
         <AnimatePresence mode="wait">
           {step === "details" && (
             <motion.div
@@ -306,7 +306,7 @@ export default function UrgentRequest() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="bg-white rounded-3xl p-5 shadow-2xl border border-neutral-100 space-y-5 relative max-h-[calc(100dvh-8.5rem)] overflow-y-auto overscroll-contain"
+              className="bg-white rounded-3xl p-5 shadow-2xl border border-neutral-100 space-y-5 relative"
             >
               <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-red-500 to-orange-500" />
               <div>

@@ -27,10 +27,44 @@ export default function Booking() {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  
+
   // New states for aircon servicing unit selection
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);  // IDs of selected units
   const [isOtherUnit, setIsOtherUnit] = useState(false);  // "Chosen air con does not fall within subscription range"
+
+  type UnitFreeServiceRecord = {
+    excellentClaimCount: number;
+    blockedUntil?: string; // ISO string
+  };
+
+  // mock per-unit premium servicing usage
+  // replace with DB / context data later
+  const [unitFreeServiceRecords, setUnitFreeServiceRecords] = useState<Record<number, UnitFreeServiceRecord>>({
+    1: { excellentClaimCount: 0 },
+    2: { excellentClaimCount: 1 },
+    3: { excellentClaimCount: 2, blockedUntil: addYears(new Date(), 1).toISOString() }, // example blocked
+  });
+
+  const EXCELLENT_THRESHOLD = 80;
+
+  const getUnitConditionLabel = (healthPercent: number) => {
+    if (healthPercent >= 80) return "Excellent";
+    if (healthPercent >= 60) return "Good";
+    return "Fair";
+  };
+
+  const isUnitExcellent = (healthPercent: number) => healthPercent >= EXCELLENT_THRESHOLD;
+
+  const isUnitFreeBlocked = (unitId: number) => {
+    const record = unitFreeServiceRecords[unitId];
+    if (!record?.blockedUntil) return false;
+    return new Date(record.blockedUntil) > new Date();
+  };
+
+  const getRemainingExcellentClaims = (unitId: number) => {
+    const used = unitFreeServiceRecords[unitId]?.excellentClaimCount ?? 0;
+    return Math.max(0, 2 - used);
+  };
 
   const tabs = [
     { id: "schedule", label: "Schedule", icon: Calendar },
@@ -66,35 +100,35 @@ export default function Booking() {
   };
 
   const serviceReasons = [
-    { 
-      id: "servicing", 
-      label: "Aircon Servicing", 
+    {
+      id: "servicing",
+      label: "Aircon Servicing",
       getPriceForUnits: getServicingPrice,
-      premiumFree: true 
+      premiumFree: true
     },
-    { 
-      id: "chemical", 
-      label: "Chemical Wash", 
+    {
+      id: "chemical",
+      label: "Chemical Wash",
       getPriceForUnits: getChemicalWashPrice,
       premiumFree: false  // NOT free under premium
     },
-    { 
-      id: "overhaul", 
-      label: "Chemical Overhaul", 
+    {
+      id: "overhaul",
+      label: "Chemical Overhaul",
       getPriceForUnits: getChemicalOverhaulPrice,
-      premiumFree: false 
+      premiumFree: false
     },
-    { 
-      id: "gas", 
-      label: "Gas Top-Up", 
+    {
+      id: "gas",
+      label: "Gas Top-Up",
       getPriceForUnits: getGasTopUpPrice,
-      premiumFree: false 
+      premiumFree: false
     },
-    { 
-      id: "repair", 
-      label: "Repair/Diagnosis", 
+    {
+      id: "repair",
+      label: "Repair/Diagnosis",
       getPriceForUnits: () => 60,  // Fixed price
-      premiumFree: false 
+      premiumFree: false
     },
   ];
 
@@ -110,38 +144,60 @@ export default function Booking() {
   ];
 
   const selectedReasonData = serviceReasons.find(r => r.id === selectedReason);
-  
+
   // For servicing with "Other" units, premium members still pay
-  const isServiceFreeForPremium = selectedReason === "servicing"
-    ? (isPremium && selectedReasonData?.premiumFree && !isOtherUnit && selectedUnits.length > 0)
-    : (isPremium && selectedReasonData?.premiumFree);
-  
+  const selectedBookedUnits = units.filter((unit) => selectedUnits.includes(unit.id));
+
+  const hasBlockedSelectedUnit = selectedBookedUnits.some((unit) => isUnitFreeBlocked(unit.id));
+
+  const isEligiblePremiumServicingSelection =
+    isPremium &&
+    selectedReason === "servicing" &&
+    selectedReasonData?.premiumFree &&
+    !isOtherUnit &&
+    selectedUnits.length > 0;
+
+  const isServiceFreeForPremium = isEligiblePremiumServicingSelection && !hasBlockedSelectedUnit;
   // Calculate total cost based on service type and selections
   let totalCost = 0;
+
   if (selectedReason === "servicing") {
     if (isOtherUnit) {
-      // "Other" units always incur cost
       totalCost = selectedReasonData ? selectedReasonData.getPriceForUnits(numberOfUnits) : 0;
     } else if (selectedUnits.length > 0) {
-      // Regular users pay for selected units, Premium users pay $0
-      totalCost = isPremium ? 0 : (selectedReasonData ? selectedReasonData.getPriceForUnits(selectedUnits.length) : 0);
+      totalCost =
+        isServiceFreeForPremium
+          ? 0
+          : (selectedReasonData ? selectedReasonData.getPriceForUnits(selectedUnits.length) : 0);
     }
   } else {
-    // Other services use standard pricing
-    totalCost = isServiceFreeForPremium ? 0 : (selectedReasonData ? selectedReasonData.getPriceForUnits(numberOfUnits) : 0);
+    totalCost = isServiceFreeForPremium
+      ? 0
+      : (selectedReasonData ? selectedReasonData.getPriceForUnits(numberOfUnits) : 0);
   }
 
   const handleConfirmBooking = () => {
     // Validation checks
     if (!selectedDate || !selectedReason) return;
-    
+
     // For servicing, must have unit selection (either selectedUnits or isOtherUnit)
     if (selectedReason === "servicing" && selectedUnits.length === 0 && !isOtherUnit) {
       return;
     }
-    
+
     // Must have payment method unless service is free for premium
     if (!selectedPayment && !isServiceFreeForPremium) return;
+
+    if (
+      selectedReason === "servicing" &&
+      isPremium &&
+      !isOtherUnit &&
+      selectedUnits.length > 0 &&
+      hasBlockedSelectedUnit &&
+      !selectedPayment
+    ) {
+      return;
+    }
 
     // Show confirmation modal first
     setShowConfirmationModal(true);
@@ -160,8 +216,38 @@ export default function Booking() {
       scheduledDateTime: selectedDate!,
       totalCost: totalCost,
       isPremiumFree: isServiceFreeForPremium,
+      selectedUnitIds: selectedUnits,
+      hasBlockedSelectedUnit,
+      freeClaimType: isServiceFreeForPremium
+        ? selectedBookedUnits.every((u) => isUnitExcellent(u.healthPercent))
+          ? "counted_excellent_claim"
+          : "non_counted_non_excellent_free_claim"
+        : "paid",
     };
+    if (isServiceFreeForPremium && selectedReason === "servicing") {
+      setUnitFreeServiceRecords((prev) => {
+        const updated = { ...prev };
 
+        selectedBookedUnits.forEach((unit) => {
+          const excellent = isUnitExcellent(unit.healthPercent);
+
+          if (!excellent) return; // free, but does NOT count toward 2-claim cap
+
+          const currentCount = updated[unit.id]?.excellentClaimCount ?? 0;
+          const nextCount = Math.min(currentCount + 1, 2);
+
+          updated[unit.id] = {
+            excellentClaimCount: nextCount,
+            blockedUntil:
+              nextCount >= 2
+                ? addYears(new Date(), 1).toISOString()
+                : updated[unit.id]?.blockedUntil,
+          };
+        });
+
+        return updated;
+      });
+    }
     setCurrentBooking(booking);
     setShowConfirmationModal(false);
     setBookingConfirmed(true);
@@ -417,7 +503,10 @@ export default function Booking() {
                   <div className="space-y-2">
                     {units.map((unit) => {
                       const isSelected = selectedUnits.includes(unit.id);
-                      const excellentHealth = unit.healthPercent >= 80;
+                      const excellentHealth = isUnitExcellent(unit.healthPercent);
+                      const conditionLabel = getUnitConditionLabel(unit.healthPercent);
+                      const remainingClaims = getRemainingExcellentClaims(unit.id);
+                      const blocked = isUnitFreeBlocked(unit.id);
                       return (
                         <button
                           key={unit.id}
@@ -449,10 +538,24 @@ export default function Booking() {
                                 {unit.name}
                               </p>
                               <p className="text-xs text-slate-500">{unit.model} • Health: {unit.healthPercent}%</p>
-                              {excellentHealth && isSelected && (
-                                <p className="text-xs text-emerald-600 font-medium mt-1">
-                                  ✓ 1 free servicing appointment remaining (was 2)
-                                </p>
+                              {isSelected && isPremium && !isOtherUnit && (
+                                <div className="mt-1 space-y-1">
+                                  {blocked ? (
+                                    <p className="text-xs text-red-600 font-medium">
+                                      Free servicing claim blocked for this unit until{" "}
+                                      {format(new Date(unitFreeServiceRecords[unit.id]?.blockedUntil ?? new Date()), "MMM dd, yyyy")}
+                                    </p>
+                                  ) : excellentHealth ? (
+                                    <p className="text-xs text-emerald-600 font-medium">
+                                      Excellent condition • {remainingClaims} counted free servicing claim
+                                      {remainingClaims !== 1 ? "s" : ""} remaining
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-blue-600 font-medium">
+                                      {conditionLabel} condition • this free servicing will not count toward the 2-claim Excellent cap
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -460,12 +563,12 @@ export default function Booking() {
                             "px-2 py-1 rounded text-[10px] font-bold",
                             excellentHealth ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                           )}>
-                            {excellentHealth ? "EXCELLENT" : "NEEDS ATTENTION"}
+                            {conditionLabel.toUpperCase()}
                           </div>
                         </button>
                       );
                     })}
-                    
+
                     {/* "Other" Unit Option */}
                     <button
                       onClick={() => {
@@ -505,8 +608,8 @@ export default function Booking() {
               {(selectedReason !== "servicing" || (selectedReason === "servicing" && isOtherUnit)) && (
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-3">
-                    {selectedReason === "servicing" && isOtherUnit 
-                      ? "Number of 'OTHER' AC Units *" 
+                    {selectedReason === "servicing" && isOtherUnit
+                      ? "Number of 'OTHER' AC Units *"
                       : "Number of AC Units *"}
                   </h3>
                   <div className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between">
@@ -636,8 +739,8 @@ export default function Booking() {
               <button
                 onClick={handleConfirmBooking}
                 disabled={
-                  !selectedDate || 
-                  !selectedReason || 
+                  !selectedDate ||
+                  !selectedReason ||
                   (selectedReason === "servicing" && selectedUnits.length === 0 && !isOtherUnit) ||
                   (!selectedPayment && !isServiceFreeForPremium)
                 }
