@@ -409,7 +409,7 @@ export default function TechJobView({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col h-[100dvh] bg-slate-50 overflow-hidden"
+      className="absolute inset-0 z-30 flex flex-col h-full bg-slate-50 overflow-hidden"
     >
       {/* === FULL-SCREEN MAP === */}
       <div
@@ -1017,7 +1017,7 @@ export default function TechJobView({
 
       {/* Add Line Item Modal */}
       {showAddLineItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -1133,7 +1133,7 @@ export default function TechJobView({
 
       {/* Quotation Confirmation Modal */}
       {showQuotationConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -1172,7 +1172,7 @@ export default function TechJobView({
 
       {/* Conflict Warning Modal */}
       {showConflictWarning && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

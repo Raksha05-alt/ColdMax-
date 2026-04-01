@@ -28,7 +28,7 @@ export function PushNotification({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
-          className="fixed top-0 left-0 right-0 z-[9999] px-2 pt-2"
+          className="absolute top-0 left-0 right-0 z-[9999] px-2 pt-2"
           onClick={onDismiss}
         >
           {/* iOS-style notification */}
@@ -66,7 +66,7 @@ export function PushNotification({
 // Notification manager component to show multiple notifications
 export function NotificationDemo() {
   return (
-    <div className="fixed top-0 left-0 right-0 pointer-events-none">
+    <div className="absolute top-0 left-0 right-0 pointer-events-none">
       {/* Status bar (iOS style) */}
       <div className="bg-gradient-to-b from-slate-900/90 to-slate-900/70 backdrop-blur-xl px-6 pt-2 pb-1">
         <div className="flex items-center justify-between text-white text-xs font-medium">

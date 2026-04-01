@@ -6,7 +6,7 @@ export default function SubscriptionGate() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col h-[100dvh] bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
+    <div className="absolute inset-0 z-50 flex flex-col h-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-10 right-10 w-64 h-64 bg-blue-400 rounded-full blur-3xl" />

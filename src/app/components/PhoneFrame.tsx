@@ -70,7 +70,7 @@ export function PhoneFrame({
 // Alternative: Minimal status bar overlay (for lighter touch)
 export function StatusBarOverlay({ time = "9:41" }: { time?: string }) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9998] bg-black/0 px-6 pt-2 pb-1 pointer-events-none">
+    <div className="absolute top-0 left-0 right-0 z-[49] bg-black/0 px-6 pt-2 pb-1 pointer-events-none">
       <div className="flex items-center justify-between text-white text-xs font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
         <span>{time}</span>
         <div className="flex items-center gap-1.5">

@@ -515,7 +515,7 @@ export default function JobTracking() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col h-[100dvh] bg-slate-50 overflow-hidden"
+      className="absolute inset-0 z-30 flex flex-col h-full bg-slate-50 overflow-hidden"
     >
       <PushNotification
         show={notification.show}

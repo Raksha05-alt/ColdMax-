@@ -303,7 +303,7 @@ export default function JobPhotoSubmission() {
       {/* Cash/Cheque Payment Confirmation Modal */}
       <AnimatePresence>
         {showPaymentConfirmation && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -356,7 +356,7 @@ export default function JobPhotoSubmission() {
       {/* PayNow QR Code Modal */}
       <AnimatePresence>
         {showPayNowQR && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
