@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Settings, Activity, Thermometer, Droplets, Wind, Fan, Info, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Settings, Activity, Thermometer, Droplets, Wind, Fan, Info, AlertTriangle, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import clsx from "clsx";
 import { units } from "../../data/units";
 import { useSubscription } from "../../context/SubscriptionContext";
+import { getUnitDiagnosis, AIHealthDiagnosis } from "../../utils/aiHealthService";
 
 export default function HealthMonitor() {
   const { unitId } = useParams();
@@ -13,6 +14,8 @@ export default function HealthMonitor() {
   
   const initialIndex = unitId ? units.findIndex(u => u.id === Number(unitId)) : 0;
   const [selectedIndex, setSelectedIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
+  const [healthData, setHealthData] = useState<AIHealthDiagnosis | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   const unit = units[selectedIndex];
 
@@ -23,7 +26,22 @@ export default function HealthMonitor() {
     }
   }, [unitId]);
 
-  const healthPercent = unit.healthPercent / 100;
+  useEffect(() => {
+    let active = true;
+    const fetchHealth = async () => {
+      setIsLoading(true);
+      const data = await getUnitDiagnosis(unit);
+      if (active) {
+        setHealthData(data);
+        setIsLoading(false);
+      }
+    };
+    fetchHealth();
+    return () => { active = false; };
+  }, [unit]);
+
+  const displayHealthPercent = healthData ? healthData.health_score : unit.healthPercent;
+  const healthPercent = displayHealthPercent / 100;
   const circumference = 2 * Math.PI * 110;
 
   // Sensor data with descriptions
@@ -134,7 +152,7 @@ export default function HealthMonitor() {
              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                 <circle cx="128" cy="128" r="110" stroke="rgba(255,255,255,0.05)" strokeWidth="16" fill="none" strokeLinecap="round" />
                 <motion.circle 
-                  key={unit.id}
+                  key={`${unit.id}-${displayHealthPercent}`}
                   cx="128" cy="128" r="110" 
                   stroke="url(#gradient)" 
                   strokeWidth="16" 
@@ -147,7 +165,7 @@ export default function HealthMonitor() {
                 />
                 <defs>
                   <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={unit.healthPercent >= 70 ? "#10b981" : "#f59e0b"} />
+                    <stop offset="0%" stopColor={displayHealthPercent >= 70 ? "#10b981" : "#f59e0b"} />
                     <stop offset="100%" stopColor="#3b82f6" />
                   </linearGradient>
                 </defs>
@@ -157,23 +175,29 @@ export default function HealthMonitor() {
              <div className="text-center flex flex-col items-center justify-center z-10">
                 <div className={clsx(
                   "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-2 border",
-                  unit.healthPercent >= 70 
+                  displayHealthPercent >= 70 
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                 )}>
                    <Activity className="w-3.5 h-3.5" /> AI Health Score
                 </div>
                 <div className="text-6xl font-black tabular-nums tracking-tighter">
-                   {unit.healthPercent}<span className="text-3xl font-bold text-neutral-500">%</span>
+                   {isLoading ? (
+                     <Loader2 className="w-10 h-10 animate-spin text-neutral-500 mx-auto" />
+                   ) : (
+                     <>{displayHealthPercent}<span className="text-3xl font-bold text-neutral-500">%</span></>
+                   )}
                 </div>
-                <div className="text-sm font-medium text-neutral-400 mt-1">{unit.status}</div>
+                <div className="text-sm font-medium text-neutral-400 mt-1">
+                  {isLoading ? "Analyzing..." : (healthData?.alert.label || unit.status)}
+                </div>
                 <div className="text-xs text-neutral-500 mt-1">{unit.name} • {unit.model}</div>
              </div>
 
              {/* Glow */}
              <div className={clsx(
                "absolute inset-0 blur-3xl rounded-full pointer-events-none",
-               unit.healthPercent >= 70 ? "bg-emerald-500/5" : "bg-amber-500/5"
+               displayHealthPercent >= 70 ? "bg-emerald-500/5" : "bg-amber-500/5"
              )} />
            </div>
         </div>
@@ -233,34 +257,55 @@ export default function HealthMonitor() {
 
         {/* Current Unit Status */}
         <div className={clsx(
-          "rounded-2xl border p-5",
-          unit.healthPercent >= 80 
+          "rounded-2xl border p-5 transition-colors",
+          displayHealthPercent >= 80 
             ? "bg-emerald-500/10 border-emerald-500/30"
-            : unit.healthPercent >= 60
+            : displayHealthPercent >= 60
             ? "bg-blue-500/10 border-blue-500/30"
-            : unit.healthPercent >= 40
+            : displayHealthPercent >= 40
             ? "bg-amber-500/10 border-amber-500/30"
             : "bg-red-500/10 border-red-500/30"
         )}>
           <h3 className="text-sm font-bold text-white mb-2">Current Assessment</h3>
-          <p className="text-sm text-neutral-300 leading-relaxed">
-            {unit.healthPercent >= 80 
-              ? "Your unit is in excellent condition with optimal performance across all metrics. All sensors indicate healthy operation. Continue your current maintenance schedule."
-              : unit.healthPercent >= 60
-              ? "Your unit shows good performance with minor efficiency variations. Some sensor readings suggest routine maintenance would help maintain peak efficiency."
-              : unit.healthPercent >= 40
-              ? "Your unit requires attention. Multiple sensors indicate declining performance. Filter health and airflow efficiency are below optimal levels. Schedule service soon to avoid costly repairs."
-              : "Critical issues detected! Your unit is operating well below optimal levels. Immediate professional service is strongly recommended to prevent complete failure and potential damage."}
-          </p>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-neutral-400 text-sm py-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Fetching AI diagnostic report...
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-neutral-300 leading-relaxed mb-4">
+                {healthData?.diagnosis?.root_cause_analysis || "Diagnosis unavailable."}
+              </p>
+              
+              {healthData?.diagnosis?.recommendations && healthData.diagnosis.recommendations.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Recommended Actions</h4>
+                  {healthData.diagnosis.recommendations.map((rec: any, idx) => {
+                    const issue = rec.issue || Object.keys(rec)[0];
+                    const resolution = rec.resolution || Object.values(rec)[0];
+                    return (
+                      <div key={idx} className="flex gap-2 items-start text-sm">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                        <div>
+                          <span className="font-medium text-blue-200">{issue}: </span>
+                          <span className="text-neutral-400">{resolution}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
           
           {/* Free servicing eligibility note */}
-          {unit.healthPercent >= 80 ? (
+          {displayHealthPercent >= 80 ? (
             <div className="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
               <p className="text-xs text-blue-200 leading-relaxed">
                 ℹ️ Your unit is performing excellently. You are entitled to a <strong>maximum of 2 free servicing appointments</strong> annually at this health level.
               </p>
             </div>
-          ) : unit.healthPercent < 80 && (
+          ) : displayHealthPercent < 80 && (
             <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
               <p className="text-xs text-emerald-200 leading-relaxed">
                 ℹ️ Your unit's health score qualifies for <strong>unlimited free servicing visits</strong> to restore optimal performance.
@@ -272,14 +317,14 @@ export default function HealthMonitor() {
             onClick={() => navigate('/customer/booking')}
             className={clsx(
               "w-full mt-4 py-3 rounded-xl font-bold shadow-lg transition-all",
-              unit.healthPercent < 40
+              displayHealthPercent < 40
                 ? "bg-red-500 text-white hover:bg-red-600"
-                : unit.healthPercent < 80
+                : displayHealthPercent < 80
                 ? "bg-amber-500 text-amber-950 hover:bg-amber-600"
                 : "bg-white text-neutral-900 hover:bg-neutral-100"
             )}
           >
-            {unit.healthPercent < 40 ? "Book Emergency Service" : "Schedule Servicing"}
+            {displayHealthPercent < 40 ? "Book Emergency Service" : "Schedule Servicing"}
           </button>
         </div>
 
