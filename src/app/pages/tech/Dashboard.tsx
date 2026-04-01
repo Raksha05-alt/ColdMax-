@@ -264,8 +264,8 @@ export default function TechDashboard() {
       payout: `$${calculateTechPayout(getServicePrice("Gas Top-Up", 1, false)).toFixed(2)}`,
       status: "scheduled", scheduledDate: todayStr, date: todayStr,
       skillsMatch: getSkillsMatch("Gas Top-Up"), acBrand: "Daikin", numUnits: 1,
-      comments: "AC not cooling as well. May need gas top-up.",
-      paymentMethod: "card",
+      comments: "AC not cold enough, may need gas top-up.",
+      paymentMethod: "paynow",
     },
   ];
 

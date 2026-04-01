@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -26,6 +26,13 @@ export default function JobPhotoSubmission() {
   const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
   const [showPayNowQR, setShowPayNowQR] = useState(false);
   const [payNowLoading, setPayNowLoading] = useState(false);
+
+  // Auto-scroll up when payment confirmation or QR code is shown
+  useEffect(() => {
+    if (showPaymentConfirmation || showPayNowQR) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [showPaymentConfirmation, showPayNowQR]);
 
   // Calculate technician earnings after 20.18% commission
   const technicianEarnings = finalPayout ? finalPayout * 0.7982 : 0;
@@ -88,13 +95,10 @@ export default function JobPhotoSubmission() {
     setPayNowLoading(true);
     // Simulate payment processing
     setTimeout(() => {
-      navigate("/tech/job-complete-success", {
-        state: {
-          job,
-          finalPayout: technicianEarnings,
-        },
-      });
-    }, 3000);
+      setPayNowLoading(false);
+      setShowPayNowQR(false);
+      setShowPaymentConfirmation(true);
+    }, 2000);
   };
 
   const getPaymentMethodIcon = () => {
@@ -313,19 +317,23 @@ export default function JobPhotoSubmission() {
               <div className="text-center mb-5">
                 <div className={clsx(
                   "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                  paymentMethod === "cash" ? "bg-emerald-100" : "bg-blue-100"
+                  paymentMethod === "cash" ? "bg-emerald-100" : 
+                  paymentMethod === "paynow" ? "bg-purple-100/50" : 
+                  "bg-blue-100"
                 )}>
-                  {paymentMethod === "cash" ? (
-                    <Banknote className="w-8 h-8 text-emerald-600" />
-                  ) : (
-                    <FileText className="w-8 h-8 text-blue-600" />
-                  )}
+                  <div className={clsx(
+                    paymentMethod === "cash" ? "text-emerald-600" :
+                    paymentMethod === "paynow" ? "text-purple-600" :
+                    "text-blue-600"
+                  )}>
+                    {getPaymentMethodIcon()}
+                  </div>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">
                   Payment Confirmation
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Have you received {paymentMethod === "cash" ? "CASH" : "CHEQUE"} payment from the customer?
+                  Have you received {getPaymentMethodLabel().toUpperCase()} payment from the customer?
                 </p>
               </div>
 

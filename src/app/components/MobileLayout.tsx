@@ -57,7 +57,7 @@ export default function MobileLayout() {
         {/* Main Content Area */}
         <div className={clsx(
           "flex-1 pt-14 relative z-10",
-          hideTabBar ? "" : "pb-20",
+          hideTabBar ? "pb-32" : "pb-24",
           isCustomerHome ? "overflow-hidden bg-blue-700" : "overflow-y-auto overflow-x-hidden bg-slate-50"
         )} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <div className={clsx(

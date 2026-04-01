@@ -608,35 +608,39 @@ export default function Profile() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-8"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center px-8"
             onClick={() => setShowLogoutConfirm(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+              className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20"
             >
-              <div className="text-center mb-4">
-                <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <LogOut className="w-6 h-6 text-red-500" />
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <div className="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                    <LogOut className="w-6 h-6 text-white" />
+                  </div>
                 </div>
-                <h3 className="font-bold text-slate-900 mb-1">Sign Out?</h3>
-                <p className="text-sm text-slate-500">You'll need to log in again to access your account.</p>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Sign Out?</h3>
+                <p className="text-slate-500 text-sm leading-relaxed px-4">
+                  Are you sure you want to log out? You'll need to sign back in to access your AC health data.
+                </p>
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-medium"
-                >
-                  Cancel
-                </button>
+              <div className="flex flex-col gap-3">
                 <button
                   onClick={() => navigate("/")}
-                  className="flex-1 py-2.5 rounded-lg bg-red-600 text-white font-semibold"
+                  className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl shadow-slate-900/20 active:scale-[0.98] transition-transform"
                 >
-                  Sign Out
+                  Yes, Sign Out
+                </button>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="w-full py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold text-sm active:scale-[0.98] transition-transform"
+                >
+                  Go Back
                 </button>
               </div>
             </motion.div>

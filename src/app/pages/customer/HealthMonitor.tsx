@@ -265,19 +265,18 @@ export default function HealthMonitor() {
               {healthData?.diagnosis?.recommendations && healthData.diagnosis.recommendations.length > 0 && (
                 <div className="space-y-2 mb-4">
                   <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Recommended Actions</h4>
-                  {healthData.diagnosis.recommendations.map((rec: any, idx) => {
-                    const issue = rec.issue || Object.keys(rec)[0];
-                    const resolution = rec.resolution || Object.values(rec)[0];
-                    return (
-                      <div key={idx} className="flex gap-2 items-start text-sm">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                        <div>
-                          <span className="font-medium text-blue-200">{issue}: </span>
-                          <span className="text-neutral-400">{resolution}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                    <p className="text-sm text-blue-100 leading-relaxed">
+                      {healthData.diagnosis.recommendations.map((rec: any) => {
+                        const issue = rec.issue || Object.keys(rec)[0];
+                        const resolution = rec.resolution || Object.values(rec)[0];
+                        return `${issue}: ${resolution}`;
+                      }).join(". ")}.
+                      <span className="block mt-2 font-semibold text-emerald-400">
+                        ✨ Next Schedule: Based on your current usage and health score, we recommend a {displayHealthPercent < 60 ? "Chemical Overhaul" : "General Servicing"} in {displayHealthPercent < 60 ? "1 month" : displayHealthPercent < 80 ? "3 months" : "6 months"}.
+                      </span>
+                    </p>
+                  </div>
                 </div>
               )}
             </>

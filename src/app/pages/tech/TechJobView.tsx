@@ -32,6 +32,7 @@ import {
   Trash2,
   Send,
   Camera,
+  CreditCard,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
@@ -831,6 +832,18 @@ export default function TechJobView({
                 </p>
                 <p className="text-sm font-medium text-slate-900">
                   {job.unitType}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+              <CreditCard className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                  Payment Method
+                </p>
+                <p className="text-sm font-medium text-slate-900 capitalize">
+                  {job.paymentMethod || "Not Specified"}
                 </p>
               </div>
             </div>
