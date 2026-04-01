@@ -5,7 +5,7 @@ export interface AirconUnit {
   btu: string;
   temp: string;
   status: string;
-  statusColor: "emerald" | "amber";
+  statusColor: "emerald" | "amber" | "red";
   healthPercent: number;
   evaporatorTemp: string;
   humidity: string;
@@ -80,5 +80,32 @@ export const units: AirconUnit[] = [
     compressorCurrent: 9.0,
     powerConsumption: 1.6,
     runtimeHours: 3500.0,
+  },
+    {
+    id: 3,
+    name: "Study Room",
+    model: "Panasonic Inverter",
+    btu: "9000 BTU",
+    temp: "27°C",
+    status: "Critical",
+    statusColor: "red",
+    healthPercent: 29,
+    evaporatorTemp: "19.6°C",
+    humidity: "68%",
+    airflow: "410 CFM",
+    fanSpeed: "High",
+    filterHealth: 24,
+
+    // AI Sensor Telemetry (Critical Unit)
+    indoorTemp: 27.3,
+    outdoorTemp: 33.8,
+    setTemp: 22.0,
+    humidityPercent: 68.0,
+    airflowRate: 3.8,
+    vibrationLevel: 1.0,
+    refrigerantPressure: 74.0,
+    compressorCurrent: 12.1,
+    powerConsumption: 2.1,
+    runtimeHours: 5400.0,
   },
 ];
