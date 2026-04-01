@@ -124,7 +124,7 @@ export default function JobTracking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentBooking, updateBookingStatus } = useBooking();
-  const trackingTechnician = location.state?.matchedTechnician;
+  const trackingTechnician = location.state?.matchedTechnician || currentBooking?.matchedTechnician;
   const technicianName =
     trackingTechnician?.name ||
     currentBooking?.technician ||
@@ -134,10 +134,10 @@ export default function JobTracking() {
     "https://images.unsplash.com/photo-1744853930655-52d02b83abb6?auto=format&fit=crop&w=150&q=80";
   const technicianRating = trackingTechnician?.rating ?? 4.9;
   const technicianJobs =
-    trackingTechnician?.jobsCompleted ?? 1204;
+    trackingTechnician?.jobs_completed ?? trackingTechnician?.jobsCompleted ?? 1204;
   const technicianDistance =
-    location.state?.distance || "2.4 km away";
-  const technicianEta = location.state?.etaMins ?? 15;
+    currentBooking?.distanceLabel || location.state?.distance || "2.4 km away";
+  const technicianEta = currentBooking?.etaMinutes ?? location.state?.etaMins ?? 15;
   const trackedService =
     location.state?.issueLabel ||
     currentBooking?.service ||
@@ -153,7 +153,7 @@ export default function JobTracking() {
     title: string;
     message: string;
   }>({ show: false, title: "", message: "" });
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMoving =
     status === "en-route" || status === "arriving";
@@ -224,7 +224,7 @@ export default function JobTracking() {
   const extraQuotationAmount = 35;
   const baseCost = Number(
     String(
-      currentBooking?.price || currentBooking?.cost || 120,
+      currentBooking?.totalCost || 120,
     ).replace(/[^0-9.]/g, ""),
   );
   const finalCustomerCost = extraQuotationAccepted
@@ -412,7 +412,7 @@ export default function JobTracking() {
       return;
     }
     const t = setInterval(
-      () => setEta((e) => Math.max(0, e - 1)),
+      () => setEta((e: number) => Math.max(0, e - 1)),
       60000 / 4,
     );
     return () => clearInterval(t);
@@ -780,7 +780,7 @@ export default function JobTracking() {
           </motion.div>
         )}
 
-        {!isMoving && status !== "completed" && (
+        {!isMoving && (
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg px-3 py-2 border border-slate-200">
             <p
               className={clsx(

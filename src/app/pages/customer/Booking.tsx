@@ -9,14 +9,17 @@ import { useNavigate } from "react-router";
 import { clsx } from "clsx";
 import { DayPicker } from "react-day-picker";
 import { format, addYears, addDays } from "date-fns";
-import { units } from "../../data/units";
 import { useBooking } from "../../context/BookingContext";
 import { useSubscription } from "../../context/SubscriptionContext";
+import { useUnits } from "../../context/UnitsContext";
+import { assignTechnician } from "../../utils/aiTechnicianService";
 
 export default function Booking() {
   const navigate = useNavigate();
   const { setCurrentBooking } = useBooking();
   const { isPremium } = useSubscription();
+  const { units } = useUnits();
+  
   const [activeTab, setActiveTab] = useState<"schedule" | "tips" | "reminders">("schedule");
   const tomorrow = addDays(new Date(), 1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(tomorrow);
@@ -27,6 +30,7 @@ export default function Booking() {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isAssigningTech, setIsAssigningTech] = useState(false);
 
   // New states for aircon servicing unit selection
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);  // IDs of selected units
@@ -55,7 +59,8 @@ export default function Booking() {
 
   const isUnitExcellent = (healthPercent: number) => healthPercent >= EXCELLENT_THRESHOLD;
 
-  const isUnitFreeBlocked = (unitId: number) => {
+  const isUnitFreeBlocked = (unitId: number, healthPercent: number) => {
+    if (!isUnitExcellent(healthPercent)) return false; // Not blocked for fair/poor condition
     const record = unitFreeServiceRecords[unitId];
     if (!record?.blockedUntil) return false;
     return new Date(record.blockedUntil) > new Date();
@@ -148,7 +153,7 @@ export default function Booking() {
   // For servicing with "Other" units, premium members still pay
   const selectedBookedUnits = units.filter((unit) => selectedUnits.includes(unit.id));
 
-  const hasBlockedSelectedUnit = selectedBookedUnits.some((unit) => isUnitFreeBlocked(unit.id));
+  const hasBlockedSelectedUnit = selectedBookedUnits.some((unit) => isUnitFreeBlocked(unit.id, unit.healthPercent));
 
   const isEligiblePremiumServicingSelection =
     isPremium &&
@@ -203,13 +208,22 @@ export default function Booking() {
     setShowConfirmationModal(true);
   };
 
-  const proceedWithBooking = () => {
+  const proceedWithBooking = async () => {
+    setIsAssigningTech(true);
     const timeLabel = times.find((t) => t.id === selectedTime)?.label || "";
+    
+    // Call AI Technician matching service
+    const techResponse = await assignTechnician(
+      selectedReason,
+      selectedTime,
+      numberOfUnits
+    );
+
     const booking = {
       date: format(selectedDate!, "MMM dd"),
       dateFormatted: format(selectedDate!, "MMM dd, yyyy"),
       time: timeLabel,
-      technician: "David Tan",
+      technician: techResponse.technician.name,
       service: selectedReasonData?.label || "Service",
       unit: `${numberOfUnits} unit${numberOfUnits > 1 ? 's' : ''}`,
       status: "confirmed" as const,
@@ -223,6 +237,10 @@ export default function Booking() {
           ? "counted_excellent_claim"
           : "non_counted_non_excellent_free_claim"
         : "paid",
+      matchedTechnician: techResponse.technician,
+      etaMinutes: techResponse.eta_minutes,
+      distanceLabel: techResponse.distance_label,
+      matchConfidence: techResponse.confidence,
     };
     if (isServiceFreeForPremium && selectedReason === "servicing") {
       setUnitFreeServiceRecords((prev) => {
@@ -248,9 +266,10 @@ export default function Booking() {
         return updated;
       });
     }
-    setCurrentBooking(booking);
+    setCurrentBooking(booking as any);
     setShowConfirmationModal(false);
     setBookingConfirmed(true);
+    setIsAssigningTech(false);
   };
 
   // Booking Confirmed View
@@ -412,7 +431,7 @@ export default function Booking() {
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-black text-white">$0</span>
                         <span className="text-sm text-white/70 font-medium line-through">
-                          ${selectedReasonData!.cost * numberOfUnits}
+                          ${selectedReasonData!.getPriceForUnits(numberOfUnits)}
                         </span>
                       </div>
                       <p className="text-xs text-emerald-100 mt-2 flex items-center gap-1.5">
@@ -506,7 +525,7 @@ export default function Booking() {
                       const excellentHealth = isUnitExcellent(unit.healthPercent);
                       const conditionLabel = getUnitConditionLabel(unit.healthPercent);
                       const remainingClaims = getRemainingExcellentClaims(unit.id);
-                      const blocked = isUnitFreeBlocked(unit.id);
+                      const blocked = isUnitFreeBlocked(unit.id, unit.healthPercent);
                       return (
                         <button
                           key={unit.id}
@@ -826,9 +845,14 @@ export default function Booking() {
               </button>
               <button
                 onClick={proceedWithBooking}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm"
+                disabled={isAssigningTech}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm flex justify-center items-center"
               >
-                Proceed
+                {isAssigningTech ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  "Proceed"
+                )}
               </button>
             </div>
           </motion.div>

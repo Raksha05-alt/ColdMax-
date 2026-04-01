@@ -23,9 +23,22 @@ from api.models import (
     FleetSummaryResponse,
     ModelInfoResponse,
     HealthScoreResponse,
+    TechnicianAssignRequest,
+    TechnicianAssignResponse,
 )
 from ml.predict import HealthScorePredictor
 from ml.diagnostics import generate_diagnosis, generate_batch_diagnosis
+
+# Lazy-import so the app boots even if the model isn't trained yet
+technician_matcher = None
+
+try:
+    from ml.predict_technician import get_matcher as _get_matcher
+    _tm = _get_matcher()
+    technician_matcher = _tm
+    print("✅ Technician matcher loaded successfully!")
+except Exception as e:
+    print(f"⚠️  Technician matcher not loaded ({e}). Run: python ml/train_technician_model.py")
 
 # Global predictor (loaded on startup)
 predictor = None
@@ -158,6 +171,30 @@ async def get_fleet_summary():
 
     summary = predictor.predict_fleet_summary(str(data_path))
     return summary
+
+
+@app.post("/assign_technician", response_model=TechnicianAssignResponse)
+async def assign_technician(request: TechnicianAssignRequest):
+    """
+    AI-powered technician matching.
+    Accepts job details and returns the best-matched available technician
+    based on skills, proximity, and historical performance.
+    """
+    if technician_matcher is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Technician model not loaded. Run: python ml/train_technician_model.py"
+        )
+
+    result = technician_matcher.predict(
+        service_type=request.service_type,
+        urgency=request.urgency,
+        customer_lat=request.customer_lat,
+        customer_lon=request.customer_lon,
+        time_slot=request.time_slot,
+        num_units=request.num_units,
+    )
+    return result
 
 
 if __name__ == "__main__":

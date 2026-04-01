@@ -59,14 +59,22 @@ export async function getUnitDiagnosis(unit: AirconUnit): Promise<AIHealthDiagno
 function getFallbackDiagnosis(reading: any): AIHealthDiagnosis {
   // Simple rule-based logic predicting the score
   const filterFactor = reading.filter_status / 100;
-  const runtimeFactor = Math.max(0, 1 - reading.runtime_hours / 10000);
+  const runtimeFactor = Math.max(0.5, 1 - reading.runtime_hours / 20000); // Less aggressive runtime penalty
   
-  let score = 90 * filterFactor * runtimeFactor;
-  if (reading.refrigerant_pressure < 100) score -= 15;
-  if (reading.vibration_level > 0.2) score -= 10;
-  if (reading.compressor_current > 8.0) score -= 10;
+  let score = 100 * filterFactor * runtimeFactor;
   
-  score = Math.max(0, Math.min(100, score));
+  // Apply proportional penalties rather than flat massive drops
+  if (reading.refrigerant_pressure < 100) {
+    score -= (100 - Math.max(50, reading.refrigerant_pressure)) * 0.4;
+  }
+  if (reading.vibration_level > 0.2) {
+    score -= (Math.min(1.0, reading.vibration_level) - 0.2) * 20;
+  }
+  if (reading.compressor_current > 8.0) {
+    score -= (Math.min(15.0, reading.compressor_current) - 8.0) * 3;
+  }
+  
+  score = Math.max(1, Math.min(100, score)); // Prevent exact 0% for variance
 
   let alertLevel = "excellent";
   if (score < 40) alertLevel = "critical";

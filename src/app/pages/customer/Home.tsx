@@ -1,9 +1,10 @@
 import { motion } from "motion/react";
+import clsx from "clsx";
 import { AlertCircle, CalendarClock, Activity, MapPin, X, AlertTriangle, Crown, Calendar, Clock, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useLocation } from "../../context/LocationContext";
 import { useSubscription } from "../../context/SubscriptionContext";
-import { units } from "../../data/units";
+import { useUnits } from "../../context/UnitsContext";
 import { useState, useEffect } from "react";
 import { PushNotification } from "../../components/PushNotification";
 import { StatusBarOverlay } from "../../components/PhoneFrame";
@@ -12,6 +13,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { selectedLocation } = useLocation();
   const { isPremium, isSubscribed, tier } = useSubscription();
+  const { units } = useUnits();
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [showPushNotification, setShowPushNotification] = useState(false);
   const [notificationData, setNotificationData] = useState({
@@ -110,16 +112,23 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Low Refrigerant Alert */}
-        {unitsNeedingAttention.map(unit => (
-          !dismissedAlerts.includes(unit.id) && (
+        {/* Health Alerts */}
+        {unitsNeedingAttention.map(unit => {
+          const isCritical = unit.healthPercent < 40;
+          const isWarning = unit.healthPercent >= 40 && unit.healthPercent < 70;
+          const isAttention = unit.healthPercent >= 70 && unit.healthPercent < 80;
+          
+          return !dismissedAlerts.includes(unit.id) && (
             <motion.div
               key={unit.id}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative z-10 px-5 mb-6"
             >
-              <div className="bg-red-500 rounded-xl p-4 shadow-lg relative">
+              <div className={clsx(
+                "rounded-xl p-4 shadow-lg relative",
+                isCritical ? "bg-red-500" : isWarning ? "bg-amber-500" : "bg-blue-500"
+              )}>
                 <button
                   onClick={() => setDismissedAlerts([...dismissedAlerts, unit.id])}
                   className="absolute top-3 right-3 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
@@ -131,13 +140,20 @@ export default function Home() {
                     <AlertTriangle className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-sm mb-1">Low Refrigerant Alert</h3>
+                    <h3 className="font-bold text-white text-sm mb-1">
+                      {isCritical ? "Critical Health Alert" : isWarning ? "Health Check Requested" : "Efficiency Alert"}
+                    </h3>
                     <p className="text-xs text-white/90 mb-3 leading-relaxed">
-                      Your {unit.name} unit has critically low refrigerant level ({unit.healthPercent}%). Immediate service recommended.
+                      {isCritical 
+                        ? `Your ${unit.name} unit has critically low efficiency (${unit.healthPercent}%). Immediate service required.`
+                        : isWarning 
+                        ? `Your ${unit.name} unit is at ${unit.healthPercent}% health. We recommend scheduling a preventive checkup.`
+                        : `Your ${unit.name} unit is at ${unit.healthPercent}% health. Consider a filter cleaning to maintain peak performance.`
+                      }
                     </p>
                     <button
                       onClick={() => navigate("/customer/units")}
-                      className="bg-white text-red-600 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors"
+                      className="bg-white text-slate-900 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors"
                     >
                       View Unit Details
                     </button>
@@ -145,8 +161,8 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-          )
-        ))}
+          );
+        })}
 
         {/* Quick Actions Grid */}
         <div className="relative z-10 px-5 grid grid-cols-2 gap-3 mb-6">

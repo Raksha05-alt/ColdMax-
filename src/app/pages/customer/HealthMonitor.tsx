@@ -3,44 +3,29 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Settings, Activity, Thermometer, Droplets, Wind, Fan, Info, AlertTriangle, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import clsx from "clsx";
-import { units } from "../../data/units";
 import { useSubscription } from "../../context/SubscriptionContext";
-import { getUnitDiagnosis, AIHealthDiagnosis } from "../../utils/aiHealthService";
+import { useUnits } from "../../context/UnitsContext";
 
 export default function HealthMonitor() {
   const { unitId } = useParams();
   const navigate = useNavigate();
   const { tier } = useSubscription();
+  const { units, getDiagnostic, isLoading } = useUnits();
   
-  const initialIndex = unitId ? units.findIndex(u => u.id === Number(unitId)) : 0;
+  const initialIndex = unitId ? units.findIndex((u: any) => u.id === Number(unitId)) : 0;
   const [selectedIndex, setSelectedIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
-  const [healthData, setHealthData] = useState<AIHealthDiagnosis | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   
   const unit = units[selectedIndex];
+  const healthData = getDiagnostic(unit?.id);
 
   useEffect(() => {
     if (unitId) {
-      const idx = units.findIndex(u => u.id === Number(unitId));
+      const idx = units.findIndex((u: any) => u.id === Number(unitId));
       if (idx >= 0) setSelectedIndex(idx);
     }
-  }, [unitId]);
+  }, [unitId, units]);
 
-  useEffect(() => {
-    let active = true;
-    const fetchHealth = async () => {
-      setIsLoading(true);
-      const data = await getUnitDiagnosis(unit);
-      if (active) {
-        setHealthData(data);
-        setIsLoading(false);
-      }
-    };
-    fetchHealth();
-    return () => { active = false; };
-  }, [unit]);
-
-  const displayHealthPercent = healthData ? healthData.health_score : unit.healthPercent;
+  const displayHealthPercent = unit?.healthPercent || 0;
   const healthPercent = displayHealthPercent / 100;
   const circumference = 2 * Math.PI * 110;
 

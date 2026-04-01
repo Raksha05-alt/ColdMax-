@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
 import { PushNotification } from "../../components/PushNotification";
+import { useBooking } from "../../context/BookingContext";
 import TechJobView from "./TechJobView";
 import { getServicePrice, calculateTechPayout } from "../../utils/pricing";
 
@@ -36,6 +37,7 @@ type Job = {
 
 export default function TechDashboard() {
   const navigate = useNavigate();
+  const { currentBooking } = useBooking();
   const [showJobNotification, setShowJobNotification] = useState(false);
   const [activeTab, setActiveTab] = useState<"available" | "upcoming">("available");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -187,6 +189,36 @@ export default function TechDashboard() {
       paymentMethod: "cheque",
     },
   ];
+
+  if (currentBooking) {
+    const isAssignedToMe = currentBooking.matchedTechnician?.name === "David Tan" || currentBooking.technician === "David Tan";
+    if (isAssignedToMe) {
+      const aiJob: Job = {
+        id: 999,
+        customer: "Current App User",
+        location: "Customer Location",
+        issue: currentBooking.service,
+        unitType: currentBooking.unit,
+        time: currentBooking.time,
+        distance: currentBooking.distanceLabel || "5.2 km",
+        distanceKm: parseFloat(currentBooking.distanceLabel || "5.2"),
+        payout: `$${currentBooking.totalCost || 120}`,
+        priority: "urgent",
+        duration: "1.5 hrs",
+        date: currentBooking.date,
+        isEmergency: false,
+        skillsMatch: currentBooking.matchConfidence ? Math.round(currentBooking.matchConfidence) : 95,
+        acBrand: "Unknown",
+        numUnits: parseInt(currentBooking.unit.split(" ")[0]) || 1,
+        comments: "✨ AI assigned job based on your skills, proximity, and availability.",
+        paymentMethod: "card",
+      };
+      // Check to prevent double insertion if React re-renders, but since it's recomputed every render, it's fine.
+      if (!allAvailableJobs.some(j => j.id === 999)) {
+        allAvailableJobs.unshift(aiJob);
+      }
+    }
+  }
 
   // Filter jobs based on technician type
   const availableJobs = allAvailableJobs.filter(job => {

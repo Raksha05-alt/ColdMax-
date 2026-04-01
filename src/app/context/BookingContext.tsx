@@ -9,6 +9,18 @@ export type BookingStatus =
   | "in-progress"
   | "completed";
 
+export interface MatchedTechnician {
+  id: string;
+  name: string;
+  skills: string[];
+  specialisation: string;
+  rating: number;
+  jobs_completed: number;
+  image: string;
+  phone: string;
+  years_experience: number;
+}
+
 export interface BookingDetails {
   date: string;
   dateFormatted: string;
@@ -20,6 +32,11 @@ export interface BookingDetails {
   scheduledDateTime?: Date;
   totalCost?: number;
   isPremiumFree?: boolean;
+  // AI matching fields
+  matchedTechnician?: MatchedTechnician;
+  etaMinutes?: number;
+  distanceLabel?: string;
+  matchConfidence?: number;
 }
 
 interface BookingContextType {

@@ -6,6 +6,39 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 
+# ── Technician Matching Models ─────────────────────────────────────────────────
+
+class TechnicianAssignRequest(BaseModel):
+    """Request body for AI technician matching."""
+    service_type: str = Field(..., description="servicing | chemical | overhaul | gas | repair", examples=["servicing"])
+    urgency: str = Field(default="medium", description="low | medium | high | emergency")
+    customer_lat: float = Field(..., description="Customer latitude", examples=[1.3521])
+    customer_lon: float = Field(..., description="Customer longitude", examples=[103.8198])
+    time_slot: str = Field(default="morning", description="morning | afternoon | evening")
+    num_units: int = Field(default=1, ge=1, le=10)
+
+
+class TechnicianProfile(BaseModel):
+    id: str
+    name: str
+    skills: List[str]
+    specialisation: str
+    rating: float
+    jobs_completed: int
+    image: str
+    phone: str
+    years_experience: int
+
+
+class TechnicianAssignResponse(BaseModel):
+    technician: TechnicianProfile
+    confidence: float = Field(..., description="Match confidence percentage")
+    distance_km: float
+    eta_minutes: int
+    distance_label: str
+    model_accuracy: float
+
+
 class SensorReading(BaseModel):
     """A single sensor reading from an AC unit."""
     unit_id: str = Field(..., description="AC unit identifier", examples=["AC-001"])

@@ -1,9 +1,10 @@
 import { ArrowLeft, Plus, Fan, BatteryWarning } from "lucide-react";
 import { useNavigate } from "react-router";
-import { units } from "../../data/units";
+import { useUnits } from "../../context/UnitsContext";
 
 export default function Units() {
   const navigate = useNavigate();
+  const { units } = useUnits();
 
   const unitIcons = [Fan, BatteryWarning];
 
