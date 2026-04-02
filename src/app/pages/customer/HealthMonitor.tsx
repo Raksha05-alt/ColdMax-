@@ -314,7 +314,7 @@ export default function HealthMonitor() {
           )}
 
           <button
-            onClick={() => navigate('/customer/booking')}
+            onClick={() => navigate(displayHealthPercent < 40 ? '/customer/urgent' : '/customer/booking')}
             className={clsx(
               "w-full mt-4 py-3 rounded-xl font-bold shadow-lg transition-all",
               displayHealthPercent < 40
