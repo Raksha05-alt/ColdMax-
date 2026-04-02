@@ -63,6 +63,10 @@ export const emergencyIssuePrices: Record<string, number> = {
   "blinking": 300,
   "temp_inconsistent": 130,
   "cannot_turn_on": 150,
+  "loud_noise": 120,    // Added
+  "bad_smell": 100,     // Added
+  "freezing": 160,      // Added
+  "remote_problem": 80, // Added
 };
 
 // Calculate commission (20.18%)
@@ -79,7 +83,7 @@ export const calculateTechPayout = (amount: number) => {
 export const getServicePrice = (serviceType: string, units: number = 1, isEmergency: boolean = false): number => {
   const type = serviceType.toLowerCase();
   
-  if (type.includes("servicing") || type.includes("filter")) {
+  if (type.includes("aircon servicing") || type.includes("servicing") || type.includes("filter")) {
     return isEmergency ? getEmergencyServicingPrice(units) : getServicingPrice(units);
   }
   if (type.includes("chemical wash")) {
@@ -88,7 +92,7 @@ export const getServicePrice = (serviceType: string, units: number = 1, isEmerge
   if (type.includes("chemical overhaul") || type.includes("overhaul")) {
     return getChemicalOverhaulPrice(units);
   }
-  if (type.includes("gas")) {
+  if (type.includes("gas") || type.includes("top-up")) {
     return getGasTopUpPrice(units);
   }
   if (type.includes("repair") || type.includes("diagnosis")) {
@@ -112,8 +116,20 @@ export const getServicePrice = (serviceType: string, units: number = 1, isEmerge
   if (type.includes("temperature inconsistent") || type.includes("temp inconsistent")) {
     return emergencyIssuePrices["temp_inconsistent"] * units;
   }
-  if (type.includes("cannot turn on") || type.includes("trips")) {
+  if (type.includes("cannot turn on") || type.includes("trips") || type.includes("not turning on")) {
     return emergencyIssuePrices["cannot_turn_on"] * units;
+  }
+  if (type.includes("noise") || type.includes("loud")) {
+    return emergencyIssuePrices["loud_noise"] * units;
+  }
+  if (type.includes("smell") || type.includes("stink")) {
+    return emergencyIssuePrices["bad_smell"] * units;
+  }
+  if (type.includes("freezing") || type.includes("ice") || type.includes("icing")) {
+    return emergencyIssuePrices["freezing"] * units;
+  }
+  if (type.includes("remote")) {
+    return emergencyIssuePrices["remote_problem"] * units;
   }
   if (type.includes("maintenance")) {
     return getServicingPrice(units);

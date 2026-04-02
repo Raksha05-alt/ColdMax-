@@ -27,6 +27,7 @@ import { clsx } from "clsx";
 import { useLocation } from "../../context/LocationContext";
 import { useSubscription } from "../../context/SubscriptionContext";
 import { useRequests } from "../../context/RequestContext";
+import { getEmergencyServicingPrice, emergencyIssuePrices } from "../../utils/pricing";
 
 export default function UrgentRequest() {
   const navigate = useNavigate();
@@ -48,20 +49,6 @@ export default function UrgentRequest() {
   >(null);
 
   // Emergency service issues with pricing (AC Emergency is NOT a premium benefit)
-  // Emergency pricing includes $10 surcharge for urgent service
-  const getEmergencyServicingPrice = (units: number) => {
-    const basePrices: Record<number, number> = {
-      1: 43.60,
-      2: 59.95,
-      3: 76.30,
-      4: 92.65,
-      5: 109.00,
-      6: 125.35,
-    };
-    const basePrice = basePrices[units] || 43.60 + ((units - 1) * 16.35);
-    return basePrice + 10; // $10 surcharge for emergency
-  };
-
   const emergencyIssues = [
     {
       id: "servicing",
@@ -72,50 +59,50 @@ export default function UrgentRequest() {
     {
       id: "not_cold",
       label: "Not cold / weak cooling",
-      price: 260,
-      pricePerUnit: 260,
+      price: emergencyIssuePrices["not_cold"],
+      pricePerUnit: emergencyIssuePrices["not_cold"],
       isPerUnit: true,
     },
     {
       id: "weak_airflow",
       label: "Weak or no airflow",
-      price: 180,
-      pricePerUnit: 180,
+      price: emergencyIssuePrices["weak_airflow"],
+      pricePerUnit: emergencyIssuePrices["weak_airflow"],
       isPerUnit: true,
     },
     {
       id: "leaking",
       label: "Water leaking",
-      price: 100,
-      pricePerUnit: 100,
+      price: emergencyIssuePrices["leaking"],
+      pricePerUnit: emergencyIssuePrices["leaking"],
       isPerUnit: true,
     },
     {
       id: "not_cooling_all",
       label: "Not cooling at all",
-      price: 480,
-      pricePerUnit: 480,
+      price: emergencyIssuePrices["not_cooling_all"],
+      pricePerUnit: emergencyIssuePrices["not_cooling_all"],
       isPerUnit: true,
     },
     {
       id: "blinking",
       label: "Blinking / not responding",
-      price: 300,
-      pricePerUnit: 300,
+      price: emergencyIssuePrices["blinking"],
+      pricePerUnit: emergencyIssuePrices["blinking"],
       isPerUnit: true,
     },
     {
       id: "temp_inconsistent",
       label: "Temperature inconsistent",
-      price: 130,
-      pricePerUnit: 130,
+      price: emergencyIssuePrices["temp_inconsistent"],
+      pricePerUnit: emergencyIssuePrices["temp_inconsistent"],
       isPerUnit: true,
     },
     {
       id: "cannot_turn_on",
       label: "Cannot turn on / trips",
-      price: 150,
-      pricePerUnit: 150,
+      price: emergencyIssuePrices["cannot_turn_on"],
+      pricePerUnit: emergencyIssuePrices["cannot_turn_on"],
       isPerUnit: true,
     },
   ];

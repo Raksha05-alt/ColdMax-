@@ -37,6 +37,14 @@ import {
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
 import { useBooking } from "../../context/BookingContext";
+import { 
+  getServicingPrice, 
+  getChemicalWashPrice, 
+  getChemicalOverhaulPrice, 
+  getGasTopUpPrice, 
+  getRepairDiagnosisPrice,
+  emergencyIssuePrices 
+} from "../../utils/pricing";
 
 interface JobData {
   id: number;
@@ -74,52 +82,6 @@ interface LineItem {
   units: number;
 }
 
-// Service pricing
-const getServicingPrice = (units: number) => {
-  const prices: Record<number, number> = {
-    1: 43.6,
-    2: 59.95,
-    3: 76.3,
-    4: 92.65,
-    5: 109.0,
-    6: 125.35,
-  };
-  return prices[units] || 43.6;
-};
-
-const getChemicalWashPrice = (units: number) => {
-  const prices: Record<number, number> = {
-    1: 92.65,
-    2: 174.4,
-    3: 245.25,
-    4: 305.2,
-    5: 381.5,
-  };
-  return prices[units] || 92.65;
-};
-
-const getChemicalOverhaulPrice = (units: number) => {
-  const prices: Record<number, number> = {
-    1: 163.5,
-    2: 305.2,
-    3: 425.1,
-    4: 523.2,
-    5: 654.0,
-  };
-  return prices[units] || 163.5;
-};
-
-const getGasTopUpPrice = (units: number) => {
-  const prices: Record<number, number> = {
-    1: 163.5,
-    2: 305.2,
-    3: 425.1,
-    4: 523.2,
-    5: 654.0,
-  };
-  return prices[units] || 163.5;
-};
-
 // All available services
 const serviceOptions = [
   {
@@ -145,42 +107,42 @@ const serviceOptions = [
   {
     id: "repair",
     label: "Repair/Diagnosis",
-    getPriceForUnits: () => 60,
+    getPriceForUnits: getRepairDiagnosisPrice,
   },
   {
     id: "not_cooling",
     label: "AC Not Cooling",
-    getPriceForUnits: () => 180,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["not_cold"] * units,
   },
   {
     id: "water_leak",
     label: "Water Leaking",
-    getPriceForUnits: () => 150,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["leaking"] * units,
   },
   {
     id: "loud_noise",
     label: "Loud/Strange Noise",
-    getPriceForUnits: () => 120,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["loud_noise"] * units,
   },
   {
     id: "bad_smell",
     label: "Bad Smell",
-    getPriceForUnits: () => 100,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["bad_smell"] * units,
   },
   {
     id: "not_turning_on",
     label: "Not Turning On",
-    getPriceForUnits: () => 200,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["cannot_turn_on"] * units,
   },
   {
     id: "freezing",
     label: "Freezing/Icing Up",
-    getPriceForUnits: () => 160,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["freezing"] * units,
   },
   {
     id: "remote_not_working",
     label: "Remote Not Working",
-    getPriceForUnits: () => 80,
+    getPriceForUnits: (units: number) => emergencyIssuePrices["remote_problem"] * units,
   },
 ];
 

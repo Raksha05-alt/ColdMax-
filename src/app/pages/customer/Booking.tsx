@@ -13,6 +13,13 @@ import { useBooking } from "../../context/BookingContext";
 import { useSubscription } from "../../context/SubscriptionContext";
 import { useUnits } from "../../context/UnitsContext";
 import { assignTechnician } from "../../utils/aiTechnicianService";
+import { 
+  getServicingPrice, 
+  getChemicalWashPrice, 
+  getChemicalOverhaulPrice, 
+  getGasTopUpPrice, 
+  getRepairDiagnosisPrice 
+} from "../../utils/pricing";
 
 export default function Booking() {
   const navigate = useNavigate();
@@ -83,27 +90,6 @@ export default function Booking() {
     { id: "evening", label: "17:00 - 20:00", slots: 5 },
   ];
 
-  // Pricing functions based on number of units
-  const getServicingPrice = (units: number) => {
-    const prices: Record<number, number> = { 1: 43.60, 2: 59.95, 3: 76.30, 4: 92.65, 5: 109.00, 6: 125.35 };
-    return prices[units] || 43.60;
-  };
-
-  const getChemicalWashPrice = (units: number) => {
-    const prices: Record<number, number> = { 1: 92.65, 2: 174.40, 3: 245.25, 4: 305.20, 5: 381.50 };
-    return prices[units] || 92.65;
-  };
-
-  const getChemicalOverhaulPrice = (units: number) => {
-    const prices: Record<number, number> = { 1: 163.50, 2: 305.20, 3: 425.10, 4: 523.20, 5: 654.00 };
-    return prices[units] || 163.50;
-  };
-
-  const getGasTopUpPrice = (units: number) => {
-    const prices: Record<number, number> = { 1: 163.50, 2: 305.20, 3: 425.10, 4: 523.20, 5: 654.00 };
-    return prices[units] || 163.50;
-  };
-
   const serviceReasons = [
     {
       id: "servicing",
@@ -132,7 +118,7 @@ export default function Booking() {
     {
       id: "repair",
       label: "Repair/Diagnosis",
-      getPriceForUnits: () => 60,  // Fixed price
+      getPriceForUnits: getRepairDiagnosisPrice,
       premiumFree: false
     },
   ];
