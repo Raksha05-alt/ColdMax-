@@ -232,28 +232,7 @@ export default function TechDashboard() {
     }
   });
 
-  const upcomingJobs: Job[] = [
-    {
-      id: 101, customer: "Alex Chen", location: "88 Tampines Ave 10",
-      issue: "General Maintenance", unitType: "LG 12000 BTU", time: "02:00 PM",
-      distance: "8.7 km", distanceKm: 8.7,
-      payout: `$${calculateTechPayout(getServicePrice("General Maintenance", 2, false)).toFixed(2)}`,
-      status: "scheduled", scheduledDate: todayStr, date: todayStr,
-      skillsMatch: getSkillsMatch("General Maintenance"), acBrand: "LG", numUnits: 2,
-      comments: "Routine maintenance for living room and bedroom units.",
-      paymentMethod: "cheque",
-    },
-    {
-      id: 102, customer: "Mary Wong", location: "45 Clementi Rd",
-      issue: "Gas Top-Up", unitType: "Daikin 9000 BTU", time: "04:30 PM",
-      distance: "12.1 km", distanceKm: 12.1,
-      payout: `$${calculateTechPayout(getServicePrice("Gas Top-Up", 1, false)).toFixed(2)}`,
-      status: "scheduled", scheduledDate: todayStr, date: todayStr,
-      skillsMatch: getSkillsMatch("Gas Top-Up"), acBrand: "Daikin", numUnits: 1,
-      comments: "AC not cold enough, may need gas top-up.",
-      paymentMethod: "paynow",
-    },
-  ];
+  const upcomingJobs: Job[] = [];
 
   const handleAcceptJob = (job: Job) => {
     setTechStats((prev) => ({
