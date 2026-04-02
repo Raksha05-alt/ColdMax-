@@ -398,14 +398,14 @@ export default function TechDashboard() {
                     onClick={() => setSelectedJob(job)}
                     className={clsx(
                       "w-full bg-white rounded-xl border shadow-sm p-4 text-left transition-all hover:shadow-md",
-                      job.priority === "urgent" ? "border-red-200 bg-red-50/30" : "border-slate-200"
+                      (job.priority === "urgent" || job.date === todayStr || job.date === "Today") ? "border-red-200 bg-red-50/30" : "border-slate-200"
                     )}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-slate-900">{job.customer}</h3>
-                          {job.priority === "urgent" && (
+                          {(job.priority === "urgent" || job.date === todayStr || job.date === "Today") && (
                             <span className="flex items-center gap-1 text-[9px] font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full uppercase">
                               <AlertCircle className="w-3 h-3" /> Urgent
                             </span>

@@ -142,9 +142,15 @@ export default function JobTracking() {
     location.state?.issueLabel ||
     currentBooking?.service ||
     "General Maintenance";
+    
+  const trackingDate = location.state?.dateFormatted || currentBooking?.dateFormatted || location.state?.date || currentBooking?.date || "Today";
+  const trackingTime = location.state?.time || currentBooking?.time || "ASAP";
+  const isEmergency = location.state?.isEmergency || false;
+  const isToday = isEmergency || trackingDate.toLowerCase() === "today" || trackingDate.includes("Today") || (new Date(trackingDate).toDateString() === new Date().toDateString() && !isNaN(new Date(trackingDate).getTime()));
+
   const [status, setStatus] = useState<BookingStatus>(
     // If coming from urgent request with matched technician, start at "assigned"
-    trackingTechnician ? "assigned" : (currentBooking?.status || "confirmed"),
+    trackingTechnician ? "assigned" : (!isToday ? "confirmed" : (currentBooking?.status || "confirmed")),
   );
   const [techPosition, setTechPosition] = useState(0);
   const [eta, setEta] = useState(technicianEta);
@@ -336,6 +342,8 @@ export default function JobTracking() {
 
   // Auto-progress through statuses for demo (starting from assigned when technician is matched)
   useEffect(() => {
+    if (!isToday) return; // Do not auto-progress for future bookings
+    
     const schedule: { delay: number; status: BookingStatus; notif?: { title: string; message: string } }[] = [
       { delay: 2000, status: "en-route", notif: { title: "On the Way!", message: `${technicianName} is heading to your location. ETA ${technicianEta} min.` } },
       { delay: 17000, status: "arriving", notif: { title: "Almost There", message: `${technicianName} will arrive in less than 2 minutes` } },
@@ -356,7 +364,7 @@ export default function JobTracking() {
     );
 
     return () => timers.forEach(clearTimeout);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isToday, technicianName, technicianEta, updateBookingStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trigger extra quotation popup when quotation appear in context
   useEffect(() => {
@@ -474,10 +482,10 @@ export default function JobTracking() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500">
-                  {currentBooking?.dateFormatted}
+                  {trackingDate}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {currentBooking?.time}
+                  {trackingTime}
                 </p>
               </div>
             </div>
@@ -1028,14 +1036,12 @@ export default function JobTracking() {
               {
                 icon: Calendar,
                 label: "Date",
-                value:
-                  currentBooking?.dateFormatted ||
-                  "Mar 30, 2026",
+                value: trackingDate,
               },
               {
                 icon: Clock,
                 label: "Time",
-                value: currentBooking?.time || "09:00 - 12:00",
+                value: trackingTime,
               },
               {
                 icon: Package,

@@ -14,8 +14,8 @@ export default function Subscriptions() {
     {
       id: "standard" as const,
       name: "Standard",
-      price: "$29",
-      period: "/month/unit",
+      price: "$40",
+      period: "/year/unit",
       description: "Smart monitoring with AI alerts",
       icon: Bell,
       color: "blue",
@@ -27,29 +27,30 @@ export default function Subscriptions() {
         "Monthly health reports",
       ],
       notIncluded: [
-        "Free maintenance services",
+        "Free air-con servicing",
         "Priority technician matching",
       ],
     },
     {
       id: "premium" as const,
       name: "Premium",
-      price: "$99",
-      period: "/month/unit",
-      description: "Complete care with unlimited service",
+      price: "$150",
+      period: "/year/unit",
+      description: "Complete care with free AC servicing",
       icon: Sparkles,
       color: "amber",
       isPopular: true,
       features: [
         "Everything in Standard",
-        "Unlimited free maintenance scheduling",
+        "Free air-con servicing (not general maintenance)",
         "Priority technician dispatch",
-        "No per-service charges",
+        "No per-service charges for eligible servicing",
         "24/7 emergency support",
-        "Annual chemical wash included",
+        "Annual chemical wash not included",
         "Dedicated account manager",
       ],
       notIncluded: [],
+      note: "Note: For each AC unit a premium user can claim free servicing for a maximum of 2 times ONLY if the AC unit condition is rated Excellent at the point of the service appointment. If the unit condition is not Excellent then the free servicing usage should not count towards this 2-time cap. If the 2-time cap is used, and the air con condition is good or fair, then the servicing is still free.",
     },
   ];
 
@@ -205,6 +206,14 @@ export default function Subscriptions() {
                     </div>
                   ))}
                 </div>
+
+                {(plan as any).note && (
+                  <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      {(plan as any).note}
+                    </p>
+                  </div>
+                )}
 
                 {isCurrentPlan ? (
                   <div className="w-full py-3.5 rounded-xl font-bold text-center bg-emerald-50 text-emerald-700 border border-emerald-200">

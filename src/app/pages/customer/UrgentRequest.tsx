@@ -758,6 +758,10 @@ export default function UrgentRequest() {
           : "2.4 km away",
         etaMins: matchedTechnician?.etaMins ?? 12,
         totalCost: totalCost,
+        time: "ASAP",
+        date: "Today",
+        dateFormatted: "Today",
+        isEmergency: true,
       },
     })
   }

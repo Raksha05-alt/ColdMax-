@@ -19,6 +19,14 @@ export default function HealthMonitor() {
   const healthData = getDiagnostic(unit?.id);
 
   useEffect(() => {
+    // Set body background to neutral-900 to prevent white gaps on bounce scrolling or safe areas
+    document.body.style.backgroundColor = '#171717';
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
+
+  useEffect(() => {
     if (unitId) {
       const idx = units.findIndex((u: any) => u.id === Number(unitId));
       if (idx >= 0) setSelectedIndex(idx);
@@ -74,7 +82,7 @@ export default function HealthMonitor() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-900 text-white font-sans pb-6">
+    <div className="flex flex-col min-h-[100dvh] w-full bg-neutral-900 text-white font-sans pb-6">
       {/* Header */}
       <header className="px-6 pt-2 pb-4 flex items-center justify-between sticky top-0 bg-neutral-900/80 backdrop-blur-md z-50">
         <button
