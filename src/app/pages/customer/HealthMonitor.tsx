@@ -154,7 +154,7 @@ export default function HealthMonitor() {
                     offset="0%"
                     stopColor={
                       displayHealthPercent < 40
-                        ? "#ef4444"
+                        ? "#991b1b"
                         : displayHealthPercent >= 70
                           ? "#10b981"
                           : "#f59e0b"
@@ -164,10 +164,8 @@ export default function HealthMonitor() {
                     offset="100%"
                     stopColor={
                       displayHealthPercent < 40
-                        ? "#eab308"
-                        : displayHealthPercent >= 70
-                          ? "#3b82f6"
-                          : "#3b82f6"
+                        ? "#ef4444"
+                        : "#3b82f6"
                     }
                   />
                 </linearGradient>
