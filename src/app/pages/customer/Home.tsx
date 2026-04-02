@@ -13,7 +13,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { selectedLocation } = useLocation();
   const { isPremium, isSubscribed, tier } = useSubscription();
-  const { units } = useUnits();
+  const { units, isLoading } = useUnits();
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [showPushNotification, setShowPushNotification] = useState(false);
   const [notificationData, setNotificationData] = useState({
@@ -24,9 +24,9 @@ export default function Home() {
   const totalUnits = units.length;
 
   // Find units that need attention
-  const unitsNeedingAttention = units.filter(unit => 
-    unit.healthPercent < 80 || unit.statusColor === "amber"
-  );
+  const unitsNeedingAttention = isLoading
+  ? []
+  : units.filter(unit => unit.healthPercent < 80);
 
   useEffect(() => {
     // Show notification for the worst unit health
@@ -152,7 +152,7 @@ export default function Home() {
                       }
                     </p>
                     <button
-                      onClick={() => navigate("/customer/units")}
+                      onClick={() => navigate(`/customer/health/${unit.id}`)}
                       className="bg-white text-slate-900 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors"
                     >
                       View Unit Details
