@@ -8,6 +8,7 @@ export default function JobCompleteSuccess() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setTechStats } = useBooking();
+  const techType = localStorage.getItem("coldmax_tech_type") as "freelance" | "fulltime" || "fulltime";
   const finalPayoutRaw = location.state?.finalPayout ?? 120;
   
   // Convert to number with proper validation
@@ -110,17 +111,19 @@ export default function JobCompleteSuccess() {
           </div>
         </motion.div>
 
-        {/* Earnings Highlight */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.7 }}
-          className="w-full bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 mb-6 text-center"
-        >
-          <p className="text-emerald-100 text-sm font-medium mb-1">Earnings</p>
-          <p className="text-4xl font-black text-white mb-1">+${finalPayout.toFixed(2)}</p>
-          <p className="text-emerald-100 text-xs">Will be deposited within 24 hours</p>
-        </motion.div>
+        {/* Earnings Highlight — hidden for full-time technicians */}
+        {techType === "freelance" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7 }}
+            className="w-full bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 mb-6 text-center"
+          >
+            <p className="text-emerald-100 text-sm font-medium mb-1">Earnings</p>
+            <p className="text-4xl font-black text-white mb-1">+${finalPayout.toFixed(2)}</p>
+            <p className="text-emerald-100 text-xs">Can be withdrawn by the end of today</p>
+          </motion.div>
+        )}
 
         {/* Action Buttons */}
         <motion.div

@@ -20,6 +20,7 @@ export default function JobPhotoSubmission() {
   const job = location.state?.job;
   const finalPayout = location.state?.finalPayout;
   const paymentMethod = job?.paymentMethod || "card";
+  const techType = localStorage.getItem("coldmax_tech_type") as "freelance" | "fulltime" || "fulltime";
 
   const qrPattern = [
     1, 1, 1, 1, 1, 1, 1, 0,
@@ -116,7 +117,13 @@ export default function JobPhotoSubmission() {
     setTimeout(() => {
       setPayNowLoading(false);
       setShowPayNowQR(false);
-      setShowPaymentConfirmation(true);
+      // Navigate directly to success page (no payment confirmation popup)
+      navigate("/tech/job-complete-success", {
+        state: {
+          job,
+          finalPayout: technicianEarnings,
+        },
+      });
     }, 2000);
   };
 
@@ -221,18 +228,20 @@ export default function JobPhotoSubmission() {
           </div>
         )}
 
-        {/* Earnings Display */}
-        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl p-4 mb-5 shadow-lg">
-          <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">
-            Your Earnings
-          </p>
-          <p className="text-3xl font-black text-white">
-            ${technicianEarnings.toFixed(2)}
-          </p>
-          <p className="text-xs text-white/80 mt-1">
-            After 20.18% platform commission
-          </p>
-        </div>
+        {/* Earnings Display — hidden for full-time technicians */}
+        {techType === "freelance" && (
+          <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl p-4 mb-5 shadow-lg">
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">
+              Your Earnings
+            </p>
+            <p className="text-3xl font-black text-white">
+              ${technicianEarnings.toFixed(2)}
+            </p>
+            <p className="text-xs text-white/80 mt-1">
+              After 20.18% platform commission
+            </p>
+          </div>
+        )}
 
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5">
