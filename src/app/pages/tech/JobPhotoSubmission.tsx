@@ -20,7 +20,26 @@ export default function JobPhotoSubmission() {
   const job = location.state?.job;
   const finalPayout = location.state?.finalPayout;
   const paymentMethod = job?.paymentMethod || "card";
-  
+
+  const qrPattern = [
+    1, 1, 1, 1, 1, 1, 1, 0,
+    1, 0, 0, 0, 0, 0, 1, 0,
+    1, 0, 1, 1, 1, 0, 1, 0,
+    1, 0, 1, 0, 1, 0, 1, 0,
+    1, 0, 1, 1, 1, 0, 1, 0,
+    1, 0, 0, 0, 0, 0, 1, 0,
+    1, 1, 1, 1, 1, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+
+    1, 1, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1,
+    1, 0, 1, 1, 0, 1, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1,
+    1, 1, 0, 1, 1, 0, 1, 0,
+    0, 0, 1, 0, 0, 1, 0, 1,
+    1, 0, 1, 1, 0, 1, 1, 0,
+    0, 1, 0, 0, 1, 0, 0, 1,
+  ];
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
@@ -132,7 +151,12 @@ export default function JobPhotoSubmission() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div
+      className={clsx(
+        "relative flex flex-col min-h-screen bg-slate-50",
+        showPaymentConfirmation || showPayNowQR ? "overflow-hidden" : ""
+      )}
+    >
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-3">
@@ -154,7 +178,14 @@ export default function JobPhotoSubmission() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-5">
+      <div
+        className={clsx(
+          "flex-1 p-5",
+          showPaymentConfirmation || showPayNowQR
+            ? "overflow-hidden"
+            : "overflow-y-auto"
+        )}
+      >
         {/* Job Info */}
         {job && (
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-5">
@@ -307,7 +338,7 @@ export default function JobPhotoSubmission() {
       {/* Cash/Cheque Payment Confirmation Modal */}
       <AnimatePresence>
         {showPaymentConfirmation && (
-          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4 rounded-[inherit]">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -317,14 +348,14 @@ export default function JobPhotoSubmission() {
               <div className="text-center mb-5">
                 <div className={clsx(
                   "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                  paymentMethod === "cash" ? "bg-emerald-100" : 
-                  paymentMethod === "paynow" ? "bg-purple-100/50" : 
-                  "bg-blue-100"
+                  paymentMethod === "cash" ? "bg-emerald-100" :
+                    paymentMethod === "paynow" ? "bg-purple-100/50" :
+                      "bg-blue-100"
                 )}>
                   <div className={clsx(
                     paymentMethod === "cash" ? "text-emerald-600" :
-                    paymentMethod === "paynow" ? "text-purple-600" :
-                    "text-blue-600"
+                      paymentMethod === "paynow" ? "text-purple-600" :
+                        "text-blue-600"
                   )}>
                     {getPaymentMethodIcon()}
                   </div>
@@ -364,7 +395,7 @@ export default function JobPhotoSubmission() {
       {/* PayNow QR Code Modal */}
       <AnimatePresence>
         {showPayNowQR && (
-          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4 rounded-[inherit]">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -393,12 +424,12 @@ export default function JobPhotoSubmission() {
                     <div className="aspect-square bg-slate-100 rounded-xl flex items-center justify-center">
                       {/* Simulated QR Code Pattern */}
                       <div className="grid grid-cols-8 gap-1 p-4">
-                        {Array.from({ length: 64 }).map((_, i) => (
+                        {qrPattern.map((cell, i) => (
                           <div
                             key={i}
                             className={clsx(
-                              "aspect-square rounded-sm",
-                              Math.random() > 0.5 ? "bg-slate-800" : "bg-slate-100"
+                              "w-4 h-4 rounded-sm",
+                              cell ? "bg-slate-800" : "bg-slate-100"
                             )}
                           />
                         ))}
