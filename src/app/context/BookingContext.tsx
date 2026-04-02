@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 export type BookingStatus =
   | "confirmed"
@@ -45,6 +45,12 @@ export interface QuotationData {
   status: "pending" | "accepted" | "rejected";
 }
 
+export interface TechStats {
+  completedEarnings: number;
+  jobsCompleted: number;
+  acceptedJobIds: number[];
+}
+
 interface BookingContextType {
   currentBooking: BookingDetails | null;
   setCurrentBooking: (booking: BookingDetails | null) => void;
@@ -52,6 +58,8 @@ interface BookingContextType {
   isBookingToday: () => boolean;
   quotation: QuotationData | null;
   setQuotation: (q: QuotationData | null) => void;
+  techStats: TechStats;
+  setTechStats: React.Dispatch<React.SetStateAction<TechStats>>;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -59,6 +67,11 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children }: { children: ReactNode }) {
   const [currentBooking, setCurrentBooking] = useState<BookingDetails | null>(null);
   const [quotation, setQuotation] = useState<QuotationData | null>(null);
+  const [techStats, setTechStats] = useState<TechStats>({
+    completedEarnings: 145,
+    jobsCompleted: 2,
+    acceptedJobIds: []
+  });
 
   const updateBookingStatus = (status: BookingStatus) => {
     setCurrentBooking((prev) => (prev ? { ...prev, status } : null));
@@ -76,7 +89,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <BookingContext.Provider value={{ currentBooking, setCurrentBooking, updateBookingStatus, isBookingToday, quotation, setQuotation }}>
+    <BookingContext.Provider value={{ currentBooking, setCurrentBooking, updateBookingStatus, isBookingToday, quotation, setQuotation, techStats, setTechStats }}>
       {children}
     </BookingContext.Provider>
   );

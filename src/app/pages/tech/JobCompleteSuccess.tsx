@@ -1,10 +1,13 @@
 import { motion } from "motion/react";
 import { CheckCircle2, Home, List } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
+import { useBooking } from "../../context/BookingContext";
+import { useEffect } from "react";
 
 export default function JobCompleteSuccess() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setTechStats } = useBooking();
   const finalPayoutRaw = location.state?.finalPayout ?? 120;
   
   // Convert to number with proper validation
@@ -20,6 +23,23 @@ export default function JobCompleteSuccess() {
   } else {
     finalPayout = 120;
   }
+
+  useEffect(() => {
+    const jobId = location.state?.job?.id;
+    if (finalPayout > 0 && jobId) {
+      // Check if we haven't already processed this job in this session
+      const processKey = 'job_processed_' + jobId;
+      if (!sessionStorage.getItem(processKey)) {
+        setTechStats((prev) => ({
+          ...prev,
+          completedEarnings: prev.completedEarnings + finalPayout,
+          jobsCompleted: prev.jobsCompleted + 1,
+          acceptedJobIds: prev.acceptedJobIds.filter((id) => id !== jobId),
+        }));
+        sessionStorage.setItem(processKey, 'true');
+      }
+    }
+  }, [finalPayout, location.state?.job?.id, setTechStats]);
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50">

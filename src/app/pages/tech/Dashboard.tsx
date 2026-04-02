@@ -37,13 +37,11 @@ type Job = {
 
 export default function TechDashboard() {
   const navigate = useNavigate();
-  const { currentBooking } = useBooking();
+  const { currentBooking, techStats, setTechStats } = useBooking();
   const [showJobNotification, setShowJobNotification] = useState(false);
   const [activeTab, setActiveTab] = useState<"available" | "upcoming">("available");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [acceptedJobIds, setAcceptedJobIds] = useState<number[]>([]);
-  const [completedEarnings, setCompletedEarnings] = useState(0); // Track today's earnings
-  const [jobsCompleted, setJobsCompleted] = useState(2); // Track jobs done today
+  const { acceptedJobIds } = techStats;
   
   // Get technician type from localStorage
   const techType = localStorage.getItem("coldmax_tech_type") as "freelance" | "fulltime" || "fulltime";
@@ -59,19 +57,7 @@ export default function TechDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Listen for job completion events from other pages
-  useEffect(() => {
-    const handleJobComplete = (event: CustomEvent) => {
-      const { amount, jobId } = event.detail;
-      setCompletedEarnings(prev => prev + amount);
-      setJobsCompleted(prev => prev + 1);
-      // Remove from accepted jobs
-      setAcceptedJobIds(prev => prev.filter(id => id !== jobId));
-    };
-    
-    window.addEventListener("job-completed" as any, handleJobComplete);
-    return () => window.removeEventListener("job-completed" as any, handleJobComplete);
-  }, []);
+
 
   const getSkillsMatch = (issue: string) => {
     const matches: Record<string, number> = {
@@ -270,7 +256,10 @@ export default function TechDashboard() {
   ];
 
   const handleAcceptJob = (job: Job) => {
-    setAcceptedJobIds(prev => (prev.includes(job.id) ? prev : [...prev, job.id]));
+    setTechStats((prev) => ({
+      ...prev,
+      acceptedJobIds: prev.acceptedJobIds.includes(job.id) ? prev.acceptedJobIds : [...prev.acceptedJobIds, job.id],
+    }));
     setActiveTab("upcoming");
     setSelectedJob(null);
   };
@@ -354,7 +343,7 @@ export default function TechDashboard() {
             <DollarSign className="w-4 h-4 text-emerald-600" />
             <p className="text-xs font-medium text-slate-500">Today</p>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mb-1">$145</p>
+          <p className="text-2xl font-bold text-slate-900 mb-1">${techStats.completedEarnings.toFixed(2)}</p>
           <div className="flex items-center gap-1 text-xs text-emerald-600">
             <TrendingUp className="w-3 h-3" />
             <span className="font-medium">+12%</span>
@@ -365,7 +354,7 @@ export default function TechDashboard() {
             <CheckCircle2 className="w-4 h-4 text-blue-600" />
             <p className="text-xs font-medium text-slate-500">Jobs Done</p>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mb-1">2</p>
+          <p className="text-2xl font-bold text-slate-900 mb-1">{techStats.jobsCompleted}</p>
           <p className="text-xs text-slate-500">{allUpcoming.length} upcoming</p>
         </div>
       </div>
