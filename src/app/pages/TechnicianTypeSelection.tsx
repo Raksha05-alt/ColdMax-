@@ -81,7 +81,7 @@ export default function TechnicianTypeSelection() {
               <div className="flex-1 text-left">
                 <div className="font-bold text-base mb-1">Freelance Technician</div>
                 <div className="text-xs text-slate-300 leading-relaxed">
-                  Focus on air con servicing only. Jobs within 10km for same-day, flexible scheduling.
+                  Focus on air con servicing only.
                 </div>
               </div>
             </div>
@@ -122,7 +122,7 @@ export default function TechnicianTypeSelection() {
               <div className="flex-1 text-left">
                 <div className="font-bold text-base mb-1">Full-Time Technician</div>
                 <div className="text-xs text-slate-300 leading-relaxed">
-                  Handle all service types including emergencies. No distance restrictions.
+                  Handle all service types including emergencies.
                 </div>
               </div>
             </div>
