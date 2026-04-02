@@ -289,7 +289,7 @@ export default function HealthMonitor() {
                 ℹ️ Your unit is performing excellently. You are entitled to a <strong>maximum of 2 free servicing appointments</strong> annually at this health level.
               </p>
             </div>
-          ) : displayHealthPercent < 80 && (
+          ) : displayHealthPercent >= 40 && displayHealthPercent < 80 && (
             <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
               <p className="text-xs text-emerald-200 leading-relaxed">
                 ℹ️ Your unit's health score qualifies for <strong>unlimited free servicing visits</strong> to restore optimal performance.
