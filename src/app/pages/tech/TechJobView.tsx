@@ -33,6 +33,7 @@ import {
   Send,
   Camera,
   CreditCard,
+  Smartphone,
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
@@ -181,6 +182,7 @@ export default function TechJobView({
     showQuotationRejectedNotification,
     setShowQuotationRejectedNotification,
   ] = useState(false);
+
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [selectedService, setSelectedService] = useState("");
   const [selectedUnits, setSelectedUnits] = useState(1);
@@ -316,22 +318,26 @@ export default function TechJobView({
     });
   };
 
-  useEffect(() => {
-    if (!quotationSent) return;
-
-    if (quotation?.status === "accepted" && !quotationAccepted) {
+  // Simulate customer response locally — no context dependency needed
+  const simulateCustomerReply = (accepted: boolean) => {
+    if (accepted) {
       setQuotationAccepted(true);
       setShowQuotationAcceptedNotification(true);
-      const hideTimer = setTimeout(() => setShowQuotationAcceptedNotification(false), 5500);
+      const hideTimer = setTimeout(() => setShowQuotationAcceptedNotification(false), 6000);
       return () => clearTimeout(hideTimer);
-    } else if (quotation?.status === "rejected" && !quotationRejected) {
+    } else {
       setQuotationRejected(true);
-      setRejectionReason("Customer declined the quotation");
+      const reasons = [
+        "Price is higher than expected",
+        "Customer wants to get another quote first",
+        "Customer will handle it themselves",
+      ];
+      setRejectionReason(reasons[Math.floor(Math.random() * reasons.length)]);
       setShowQuotationRejectedNotification(true);
-      const hideTimer = setTimeout(() => setShowQuotationRejectedNotification(false), 5500);
+      const hideTimer = setTimeout(() => setShowQuotationRejectedNotification(false), 6000);
       return () => clearTimeout(hideTimer);
     }
-  }, [quotation?.status, quotationSent, quotationAccepted, quotationRejected]);
+  };
 
   // Enhanced job details
   const customerDetails = {
@@ -824,7 +830,7 @@ export default function TechJobView({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2 pb-24">
+                <div className="space-y-2">
                   {lineItems.map((item) => (
                     <div
                       key={item.id}
@@ -863,35 +869,46 @@ export default function TechJobView({
                   </div>
 
                   {quotationAccepted ? (
-                    <button
-                      disabled
-                      className="w-full py-3 bg-emerald-100 text-emerald-700 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />{" "}
-                      Quotation Accepted
-                    </button>
-                  ) : quotationRejected ? (
                     <>
-                      <button
-                        disabled
-                        className="w-full py-3 bg-red-100 text-red-700 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed"
-                      >
-                        <X className="w-4 h-4" />{" "}
-                        Quotation Rejected
-                      </button>
-                      <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                        <p className="text-xs font-semibold text-red-900 mb-1">Customer's Reason:</p>
-                        <p className="text-xs text-red-700">{rejectionReason}</p>
+                      <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-emerald-800">Quotation Accepted</p>
+                          <p className="text-xs text-emerald-600">Updated payout: ${displayedPayout.toFixed(2)}</p>
+                        </div>
                       </div>
                     </>
+                  ) : quotationRejected ? (
+                    <>
+                      <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-200">
+                        <X className="w-4 h-4 text-red-600 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-red-800">Quotation Rejected</p>
+                          <p className="text-xs text-red-600">{rejectionReason}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setQuotationRejected(false);
+                          setQuotationSent(false);
+                          setRejectionReason("");
+                          if (setQuotation) setQuotation(null);
+                        }}
+                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                      >
+                        <Send className="w-4 h-4" /> Revise & Resend Quotation
+                      </button>
+                    </>
                   ) : quotationSent ? (
-                    <button
-                      disabled
-                      className="w-full py-3 bg-slate-300 text-slate-600 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-not-allowed"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />{" "}
-                      Quotation Sent
-                    </button>
+                    <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Send className="w-4 h-4 text-amber-600" />
+                      </motion.div>
+                      <p className="text-sm font-semibold text-amber-800">Waiting for customer response…</p>
+                    </div>
                   ) : (
                     <button
                       onClick={() =>
@@ -899,14 +916,14 @@ export default function TechJobView({
                       }
                       className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
                     >
-                      <Send className="w-4 h-4" /> Send
-                      Quotation to Customer
+                      <Send className="w-4 h-4" /> Send Quotation to Customer
                     </button>
                   )}
                 </div>
               )}
             </div>
           )}
+
           {/* === ACTION BUTTONS === */}
           <div className="mt-6 pt-4 border-t border-slate-100">
             {isAvailable && jobStatus === "idle" ? (
@@ -1113,6 +1130,7 @@ export default function TechJobView({
                 onClick={() => {
                   setShowQuotationConfirm(false);
                   setQuotationSent(true);
+                  // Also update context for cross-component awareness
                   if (setQuotation) {
                     setQuotation({
                       reason: lineItems.map((i) => i.service).join(", "),
@@ -1120,10 +1138,23 @@ export default function TechJobView({
                       status: "pending"
                     });
                   }
+                  // Simulate customer reply after 4–6 seconds (local state — reliable)
+                  const delay = 4000 + Math.random() * 2000;
+                  setTimeout(() => {
+                    const accepted = Math.random() < 0.7;
+                    simulateCustomerReply(accepted);
+                    if (setQuotation) {
+                      setQuotation({
+                        reason: lineItems.map((i) => i.service).join(", "),
+                        amount: totalQuotation,
+                        status: accepted ? "accepted" : "rejected",
+                      });
+                    }
+                  }, delay);
                 }}
                 className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm"
               >
-                Yes
+                Yes, Send
               </button>
             </div>
           </motion.div>

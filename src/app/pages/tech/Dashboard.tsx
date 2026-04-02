@@ -174,6 +174,16 @@ export default function TechDashboard() {
       comments: "3 units need servicing.",
       paymentMethod: "cheque",
     },
+    {
+      id: 8, customer: "Chloe Koh", location: "18 Bishan Street 22, #08-01",
+      issue: "Aircon Servicing", unitType: "Daikin 12000 BTU", time: "01:00 PM",
+      distance: "3.7 km", distanceKm: 3.7,
+      payout: `$${calculateTechPayout(getServicePrice("Aircon Servicing", 2, false)).toFixed(2)}`,
+      priority: "normal", duration: calculateDuration("Aircon Servicing", 2, false), date: todayStr, isEmergency: false,
+      skillsMatch: getSkillsMatch("Aircon Servicing"), acBrand: "Daikin", numUnits: 2,
+      comments: "2 units due for regular servicing. Customer prefers PayNow payment.",
+      paymentMethod: "paynow" as const,
+    },
   ];
 
   if (currentBooking) {
