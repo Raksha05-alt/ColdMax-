@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { clsx } from "clsx";
+import { useBooking } from "../../context/BookingContext";
 
 interface JobData {
   id: number;
@@ -221,6 +222,7 @@ export default function TechJobView({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [selectedService, setSelectedService] = useState("");
   const [selectedUnits, setSelectedUnits] = useState(1);
+  const { quotation, setQuotation } = useBooking();
 
   // Start at SNAP_FULL for better visibility
   const [sheetSnap, setSheetSnap] = useState<number>(SNAP_FULL);
@@ -353,45 +355,21 @@ export default function TechJobView({
   };
 
   useEffect(() => {
-    if (!quotationSent || quotationAccepted) return;
+    if (!quotationSent) return;
 
-    // Predefined rejection reasons
-    const rejectionReasons = [
-      "Price is too high for the proposed services",
-      "Would like to get a second opinion first",
-      "Only need basic servicing, not additional services",
-      "Budget constraints at the moment",
-      "Timeline doesn't work for me right now"
-    ];
-
-    // 70% chance customer accepts, 30% chance they reject
-    const willAccept = Math.random() < 0.7;
-    
-    const responseTimer = setTimeout(() => {
-      if (willAccept) {
-        setQuotationAccepted(true);
-        setShowQuotationAcceptedNotification(true);
-      } else {
-        // Customer rejected
-        const randomReason = rejectionReasons[Math.floor(Math.random() * rejectionReasons.length)];
-        setQuotationAccepted(false);
-        setShowQuotationAcceptedNotification(false);
-        setQuotationRejected(true);
-        setRejectionReason(randomReason);
-        setShowQuotationRejectedNotification(true);
-      }
-    }, 2000);
-
-    const hideTimer = setTimeout(() => {
-      setShowQuotationAcceptedNotification(false);
-      setShowQuotationRejectedNotification(false);
-    }, 5500);
-
-    return () => {
-      clearTimeout(responseTimer);
-      clearTimeout(hideTimer);
-    };
-  }, [quotationSent, quotationAccepted]);
+    if (quotation?.status === "accepted" && !quotationAccepted) {
+      setQuotationAccepted(true);
+      setShowQuotationAcceptedNotification(true);
+      const hideTimer = setTimeout(() => setShowQuotationAcceptedNotification(false), 5500);
+      return () => clearTimeout(hideTimer);
+    } else if (quotation?.status === "rejected" && !quotationRejected) {
+      setQuotationRejected(true);
+      setRejectionReason("Customer declined the quotation");
+      setShowQuotationRejectedNotification(true);
+      const hideTimer = setTimeout(() => setShowQuotationRejectedNotification(false), 5500);
+      return () => clearTimeout(hideTimer);
+    }
+  }, [quotation?.status, quotationSent, quotationAccepted, quotationRejected]);
 
   // Enhanced job details
   const customerDetails = {
@@ -1173,6 +1151,13 @@ export default function TechJobView({
                 onClick={() => {
                   setShowQuotationConfirm(false);
                   setQuotationSent(true);
+                  if (setQuotation) {
+                    setQuotation({
+                      reason: lineItems.map((i) => i.service).join(", "),
+                      amount: totalQuotation,
+                      status: "pending"
+                    });
+                  }
                 }}
                 className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm"
               >

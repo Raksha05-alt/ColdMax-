@@ -123,7 +123,7 @@ const SNAP_FULL = 78; // ~78% - full details
 export default function JobTracking() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentBooking, updateBookingStatus } = useBooking();
+  const { currentBooking, updateBookingStatus, quotation, setQuotation } = useBooking();
   const trackingTechnician = location.state?.matchedTechnician || currentBooking?.matchedTechnician;
   const technicianName =
     trackingTechnician?.name ||
@@ -221,11 +221,10 @@ export default function JobTracking() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionInput, setShowRejectionInput] = useState(false);
 
-  const extraQuotationAmount = 35;
+  const [extraQuotationAmount, setExtraQuotationAmount] = useState(0);
+  const rawCost = location.state?.totalCost ?? currentBooking?.totalCost ?? 120;
   const baseCost = Number(
-    String(
-      currentBooking?.totalCost || 120,
-    ).replace(/[^0-9.]/g, ""),
+    String(rawCost).replace(/[^0-9.]/g, ""),
   );
   const finalCustomerCost = extraQuotationAccepted
     ? baseCost + extraQuotationAmount
@@ -234,6 +233,9 @@ export default function JobTracking() {
     setExtraQuotationAccepted(true);
     setExtraQuotationHandled(true);
     setShowExtraQuotationPopup(false);
+    if (quotation) {
+      setQuotation({ ...quotation, status: "accepted" });
+    }
     setNotification({
       show: true,
       title: "Quotation Accepted",
@@ -249,6 +251,9 @@ export default function JobTracking() {
     setExtraQuotationAccepted(false);
     setExtraQuotationHandled(true);
     setShowExtraQuotationPopup(false);
+    if (quotation) {
+      setQuotation({ ...quotation, status: "rejected" });
+    }
     setNotification({
       show: true,
       title: "Quotation Rejected",
@@ -353,25 +358,11 @@ export default function JobTracking() {
     return () => timers.forEach(clearTimeout);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Trigger extra quotation popup during "in-progress" status (50% chance)
+  // Trigger extra quotation popup when quotation appear in context
   useEffect(() => {
-    if (status !== "in-progress" || extraQuotationHandled) return;
-    
-    // Predefined reasons for additional quotation
-    const quotationReasons = [
-      "Filter replacement needed - filters are heavily clogged",
-      "Gas leak detected - requires immediate top-up and repair",
-      "Condenser coils severely corroded - needs replacement",
-      "Drainage pipe blockage found - requires cleaning",
-      "Compressor showing early signs of failure - preventive repair recommended"
-    ];
-    
-    // 50% chance to show extra quotation popup
-    const shouldShowPopup = Math.random() > 0.5;
-    
-    if (shouldShowPopup) {
-      const randomReason = quotationReasons[Math.floor(Math.random() * quotationReasons.length)];
-      setExtraQuotationReason(randomReason);
+    if (quotation?.status === "pending" && !extraQuotationHandled) {
+      setExtraQuotationReason(quotation.reason);
+      setExtraQuotationAmount(quotation.amount);
       
       const timer = setTimeout(() => {
         setShowExtraQuotationPopup(true);
@@ -381,14 +372,11 @@ export default function JobTracking() {
           message: `${technicianName} has sent you a quotation request.`,
         });
         setTimeout(() => setNotification((n) => ({ ...n, show: false })), 4000);
-      }, 5000); // Show popup 5 seconds after entering in-progress
+      }, 1000); // Slight delay for smoother UI
       
       return () => clearTimeout(timer);
-    } else {
-      // If no popup, auto-mark as handled
-      setExtraQuotationHandled(true);
     }
-  }, [status, extraQuotationHandled, technicianName]);
+  }, [quotation, extraQuotationHandled, technicianName]);
 
   // Animate technician movement along route
   useEffect(() => {

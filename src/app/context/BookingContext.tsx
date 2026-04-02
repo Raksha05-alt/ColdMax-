@@ -39,17 +39,26 @@ export interface BookingDetails {
   matchConfidence?: number;
 }
 
+export interface QuotationData {
+  reason: string;
+  amount: number;
+  status: "pending" | "accepted" | "rejected";
+}
+
 interface BookingContextType {
   currentBooking: BookingDetails | null;
   setCurrentBooking: (booking: BookingDetails | null) => void;
   updateBookingStatus: (status: BookingStatus) => void;
   isBookingToday: () => boolean;
+  quotation: QuotationData | null;
+  setQuotation: (q: QuotationData | null) => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export function BookingProvider({ children }: { children: ReactNode }) {
   const [currentBooking, setCurrentBooking] = useState<BookingDetails | null>(null);
+  const [quotation, setQuotation] = useState<QuotationData | null>(null);
 
   const updateBookingStatus = (status: BookingStatus) => {
     setCurrentBooking((prev) => (prev ? { ...prev, status } : null));
@@ -67,7 +76,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <BookingContext.Provider value={{ currentBooking, setCurrentBooking, updateBookingStatus, isBookingToday }}>
+    <BookingContext.Provider value={{ currentBooking, setCurrentBooking, updateBookingStatus, isBookingToday, quotation, setQuotation }}>
       {children}
     </BookingContext.Provider>
   );

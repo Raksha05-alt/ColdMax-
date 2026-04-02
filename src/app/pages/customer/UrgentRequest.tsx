@@ -770,6 +770,7 @@ export default function UrgentRequest() {
           ? `${matchedTechnician.distanceKm.toFixed(1)} km away`
           : "2.4 km away",
         etaMins: matchedTechnician?.etaMins ?? 12,
+        totalCost: totalCost,
       },
     })
   }
